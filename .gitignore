@@ -1,0 +1,24 @@
+# Dépendances
+node_modules
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Fichiers de configuration locaux
+app.yaml # On ne met JAMAIS ce fichier sur Git
+.env
+
+# Fichiers de sauvegarde et système
+*.swp
+.DS_Store
+
+# Fichiers de build temporaires
+dist/
+build/
+
+# Archives de sauvegarde
+*.tar.gz

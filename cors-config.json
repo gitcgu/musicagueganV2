@@ -1,0 +1,12 @@
+[
+  {
+    "origin": [
+      "https://musicabackend.uc.r.appspot.com",
+      "https://musicaguegan.netlify.app",
+      "https://musica-backend-836359398199.europe-west1.run.app"
+    ],
+    "method": ["GET"],
+    "responseHeader": ["Content-Type"],
+    "maxAgeSeconds": 3600
+  }
+]

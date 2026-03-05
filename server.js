@@ -1,182 +1,181 @@
+// server.js
 const express = require('express');
 const session = require('express-session');
-const fs = require('fs');
 const cors = require('cors');
-const bodyParser = require('body-parser');
 const path = require('path');
-const { exec } = require('child_process'); // Importe le module exec
-const multer = require('multer');
+const { Storage } = require('@google-cloud/storage');
+const { Firestore, FieldValue } = require('@google-cloud/firestore');
 
+const storage = new Storage();
+const db = new Firestore({ databaseId: 'music-db' });
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 8080;
 
-const DIR_MP3 = '/var/www/html/_allmp3/';
-const DIR_MIX = '/var/www/html/PIONEER_REC2/';
-const BASE_URL = 'https://musica.zapto.org';
+// === Middleware ===
+app.use(cors({
+  origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
+  credentials: true
+}));
 
-// Définir le chemin du répertoire audio en tant que constante
-//const AUDIO_DIRECTORY = path.join(__dirname, '/home/pi/_tmp'); // Changez 'your-audio-directory' selon vos besoins
-const AUDIO_DIRECTORY = path.join('/home/pi/_tmp');
-
-// app.use(cors({origin: 'https://musica.zapto.org', credentials: true}));
-app.use(cors({origin: 'https://musicaguegan.netlify.app', credentials: true}));
-//app.use(cors({origin: 'https://musica.zapto.org/page-protegee.html', credentials: true}));
 app.use(express.json());
-app.use(session({secret: 'musica-secret-2025', resave: false, saveUninitialized: true, cookie: {secure: true, httpOnly: true, maxAge: 86400000}}));
+app.use(session({
+  secret: 'musica-secret-2025',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 } 
+}));
 
-//
-const FRONTEND_DIR = path.join(__dirname, '..', 'frontend');
-app.use(bodyParser.urlencoded({ extended: true }));
+const FRONTEND_DIR = path.join(__dirname, 'frontend');
 app.use(express.static(FRONTEND_DIR));
+app.get('/favicon.ico', (req, res) => res.status(204).send());
 
-const UNIQUE_PASSWORD = 'toto';
-//const CHEMIN_SCRIPT_SHELL = path.join('/var/www/html/conv/mon_script.sh'); // Chemin vers votre script
-const CHEMIN_SCRIPT_SHELL = path.join('/home/pi/_tmp/mon_script.sh'); // Chemin vers votre script
+// === Buckets ===
+const MP3_BUCKET_NAME = 'musica-mp3-bucket';
+const MIX_BUCKET_NAME = 'musica-mix-bucket';
 
-// /home/pi/_tmp
+// === Caches pour fichiers ===
+const caches = {
+  [MP3_BUCKET_NAME]: { files: null, loadedAt: 0 },
+  [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
+};
 
+// =========================================================================
+// == FONCTIONS UTILITAIRES ESSENTIELLES (qui manquaient)
+// =========================================================================
+async function getAllMp3(bucketName = MP3_BUCKET_NAME) {
+  const now = Date.now();
+  const cache = caches[bucketName];
+  if (cache && cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) {
+      return cache.files;
+  }
 
-const upload = multer();
-
-// Route pour afficher le formulaire protégé
-app.get('/page-protegee', (req, res) => {
-    console.log('OKKKKKKKKKKxxx');
-    res.sendFile(path.join(FRONTEND_DIR, 'page-protegee.html'));
-    //res.sendFile(path.join('/var/www/html/frontend/page-protegee.html'));
-
-});
-
-
-// Route pour vérifier le mot de passe et lancer le script shell
-app.post('/submit-chiffre', upload.none(), (req, res) => {
-    const { chiffre, password } = req.body;
-    console.log('Contenu de req.body:', req.body);
-
-     if (password === UNIQUE_PASSWORD) {
-        if (isNaN(parseInt(chiffre))) {
-          //  return res.status(400).send('Veuillez entrer un chiffre valide.');
-        }
-       if (chiffre === 'list') {
-        // Action à réaliser si chiffre vaut 'list'
-        console.log('Action pour le cas où chiffre est list');
-        //res.send('Action pour le cas où chiffre est list'); // Réponse au client
-        // Récupérer les liens MP3 et MP4
-        const mediaLinks = getMediaLinks();
-          console.log(`Liens MP3 et MP4 :\n${mediaLinks}`);
-        return res.send(`
-        <h1>Liens MP3 et MP4</h1>
-        ${mediaLinks}
-       `);
-
-       }
-    else {
-        console.log(`Lancement du script shell avec le chiffre : ${chiffre}`);
-
-        // Exécute le script shell en lui passant le chiffre comme argument
-        // Assurez-vous que CHEMIN_SCRIPT_SHELL est le chemin correct vers votre script
-       exec(`${CHEMIN_SCRIPT_SHELL} ${chiffre}`, (error, stdout, stderr) => {
-//en arriere plan
-//         exec(`${CHEMIN_SCRIPT_SHELL} ${chiffre} &`, (error, stdout, stderr) => {
-
-            console.log(`demaarrage script`);
-            if (error) {
-                    console.log('error1');
-
-                console.error(`Erreur d'exécution du script : ${error.message}`);
-                return res.status(500).send(`Erreur lors de l'exécution du script : ${error.message}`);
-            }
-            if (stderr) {
-                console.error(`Erreur du script shell : ${stderr}`);
-                // Vous pourriez vouloir renvoyer les erreurs stderr au client si pertinent
-                // return res.status(500).send(`Erreur du script : ${stderr}`);
-            }
-
-            console.log(`Sortie du script shell : ${stdout}`);
-            // --- Récupération et filtrage du résultat ---
-            let resultatTraite = {};
-            const resultatLignes = stdout.split('\n');
-
-            // Recherche de notre marqueur FIN_TRAITEMENT_JSON
-            let jsonResultString = null;
-            for (const ligne of resultatLignes) {
-                if (ligne.startsWith('FIN_TRAITEMENT_JSON:')) {
-                    jsonResultString = ligne.substring('FIN_TRAITEMENT_JSON:'.length);
-                    break;
-                }
-            }
-
-            if (jsonResultString) {
-                try {
-                    resultatTraite = JSON.parse(jsonResultString);
-                    // Ici, vous pouvez construire vos liens hypertextes à partir de resultatTraite
-                    let liensHtml = '<h2>Résultats :</h2>';
-                    if (resultatTraite.lien1 && resultatTraite.texte1) {
-                        liensHtml += `<p><a href="${resultatTraite.lien1}">${resultatTraite.texte1}</a></p>`;
-                    }
-                    if (resultatTraite.lien2 && resultatTraite.texte2) {
-                        liensHtml += `<p><a href="${resultatTraite.lien2}">${resultatTraite.texte2}</a></p>`;
-                    }
-                    // ... ajoutez d'autres liens si votre script en génère plus ...
-
-                    res.send(liensHtml); // Envoie les liens HTML au frontend
-
-                } catch (e) {
-                    console.error("Erreur lors du parsing du JSON du script :", e);
-                    res.status(500).send("Erreur de formatage du résultat du script.");
-                }
-            } else {
-                // Si le marqueur n'est pas trouvé, on affiche la sortie brute ou un message d'erreur
-                console.warn("Marqueur FIN_TRAITEMENT_JSON non trouvé dans la sortie du script.");
-                res.send(`Traitement effectué. Sortie brute : <pre>${stdout}</pre>`);
-            }
-         });
-      }
-    } else {
-        res.status(401).send('Mot de passe incorrect.');
-    }
-
-
-});
-
-// Fonction pour récupérer les fichiers MP3 et MP4
-function getMediaLinks() {
-    const directory = '/home/pi/_tmp';
-    const files = fs.readdirSync(directory);
-    let output = '';
-
-    files.forEach(file => {
-        if (file.endsWith('.mp3') || file.endsWith('.mp4')) {
-            output += `<a href="https://musica.zapto.org/_tmp/${file}">Écouter ${file}</a><br />`;
-        }
-    });
-
-    return output;
+  const [files] = await storage.bucket(bucketName).getFiles();
+  const fileNames = files.map(f => f.name).filter(f => f.endsWith('.mp3'));
+  
+  if (!caches[bucketName]) caches[bucketName] = {};
+  caches[bucketName].files = fileNames;
+  caches[bucketName].loadedAt = now;
+  return fileNames;
 }
 
-function getAllMp3(dir) { return fs.readdirSync(dir).filter(f => f.endsWith('.mp3')); }
+async function getSongStats(songName) {
+  try {
+    const doc = await db.collection('song_stats').doc(songName).get();
+    if (!doc.exists) return { likeCount: 0, dislikeCount: 0 };
+    return doc.data();
+  } catch (e) {
+    console.error(`❌ Firestore getSongStats error for ${songName}:`, e.message);
+    return { likeCount: 0, dislikeCount: 0 };
+  }
+}
+// =========================================================================
 
-app.get('/api/next-song', (req, res) => {
-    if (!req.session.playedSongs) req.session.playedSongs = [];
-    const allSongs = getAllMp3(DIR_MP3);
-    let available = allSongs.filter(s => !req.session.playedSongs.includes(s));
-    if (!available.length) { req.session.playedSongs = []; available = allSongs; }
+
+// === Routes API ===
+
+// GET next-song
+app.get('/api/next-song', async (req, res) => {
+  try {
+    const mode = req.query.mode || 'mp3';
+    const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+
+    if (!req.session.playedSongs) req.session.playedSongs = {};
+    if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName] = [];
+
+    const allSongs = await getAllMp3(bucketName);
+    let played = req.session.playedSongs[bucketName];
+    let available = allSongs.filter(s => !played.includes(s));
+
+    if (available.length === 0) {
+      req.session.playedSongs[bucketName] = [];
+      available = allSongs;
+      if (available.length === 0) return res.status(404).json({ error: `Aucune chanson trouvée dans le bucket ${bucketName}` });
+    }
+
     const song = available[Math.floor(Math.random() * available.length)];
-    req.session.playedSongs.push(song);
+    req.session.playedSongs[bucketName].push(song);
+    
+    const file = storage.bucket(bucketName).file(song);
+    const [signedUrl] = await file.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000, version: 'v4' });
+    const { likeCount, dislikeCount } = await getSongStats(song);
+
     const color = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
     const inverse = '#' + (16777215 - parseInt(color.substring(1), 16)).toString(16).padStart(6, '0');
-    // res.json({song, songName: song.replace('.mp3', ''), url: `_allmp3/${song}`, cover: `_alljpg/${song}.jpg`, played: req.session.playedSongs.length, total: allSongs.length, color, textColor: inverse});
-    res.json({song, songName: song.replace('.mp3', ''), url: `${BASE_URL}/_allmp3/${song}`, cover: `${BASE_URL}/_alljpg/${song}.jpg`, played: req.session.playedSongs.length, total: allSongs.length, color, textColor: inverse});
+
+    res.json({ songName: song.replace('.mp3', ''), url: signedUrl, fileName: song, color, textColor: inverse, likeCount, dislikeCount });
+  } catch (err) {
+    console.error('❌ /api/next-song ERROR:', err.stack);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
 });
 
-// Route pour afficher le formulaire protégé
+// GET previous-song
+app.get('/api/previous-song', async (req, res) => {
+  try {
+    const mode = req.query.mode || 'mp3';
+    if (mode !== 'mp3') {
+        return res.status(400).json({ error: "Fonction 'précédent' non disponible pour ce mode." });
+    }
+    const bucketName = MP3_BUCKET_NAME;
+
+    if (!req.session.playedSongs || !req.session.playedSongs[bucketName] || req.session.playedSongs[bucketName].length < 2) {
+      return res.status(400).json({ error: 'Pas de chanson précédente dans l\'historique.' });
+    }
+
+    req.session.playedSongs[bucketName].pop();
+    
+    const played = req.session.playedSongs[bucketName];
+    const song = played[played.length - 1];
+
+    const file = storage.bucket(bucketName).file(song);
+    const [signedUrl] = await file.getSignedUrl({ action: 'read', expires: Date.now() + 60 * 60 * 1000, version: 'v4' });
+    const { likeCount, dislikeCount } = await getSongStats(song);
+
+    const color = '#000000';
+    const inverse = '#FFFFFF';
+
+    res.json({ songName: song.replace('.mp3', ''), url: signedUrl, fileName: song, color, textColor: inverse, likeCount, dislikeCount });
+  } catch (err) {
+    console.error('❌ /api/previous-song ERROR:', err.stack);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// POST song-feedback
+app.post('/api/song-feedback', async (req, res) => {
+  try {
+    const { songName, feedback } = req.body;
+    if (!songName || !feedback) return res.status(400).json({ error: 'Données manquantes' });
+
+    if (!req.session.votedSongs) req.session.votedSongs = {};
+    if (req.session.votedSongs[songName]) {
+      return res.status(409).json({ error: 'Vous avez déjà voté pour cette chanson.' });
+    }
+    
+    const statsRef = db.collection('song_stats').doc(songName);
+    if (feedback === 'like') await statsRef.set({ likeCount: FieldValue.increment(1) }, { merge: true });
+    else if (feedback === 'dislike') await statsRef.set({ dislikeCount: FieldValue.increment(1) }, { merge: true });
+    else return res.status(400).json({error: 'Feedback non valide.'});
+
+    req.session.votedSongs[songName] = true; 
+    const statsDoc = await statsRef.get();
+    const data = statsDoc.data() || { likeCount: 0, dislikeCount: 0 };
+    res.json({ success: true, likeCount: data.likeCount || 0, dislikeCount: data.dislikeCount || 0 });
+  } catch (e) {
+    console.error('❌ FEEDBACK ERROR:', e.stack);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// Frontend
 app.get('/', (req, res) => {
-    console.log('OKKindex');
-    res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+  res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
 
-// Servir les fichiers statiques
-app.use('/your-audio-directory', express.static(AUDIO_DIRECTORY));
+// Lancement serveur
+//app.listen(PORT, () => console.log(`🎵 API sur ${PORT}`));
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => console.log(`🎵 API sur http://${HOST}:${PORT}`));
 
 
 
-app.listen(PORT, () => console.log('🎵 API sur :3000'));

@@ -1,1 +1,1 @@
-{"name":"musica-api","version":"1.0.0","main":"server.js","dependencies":{"cors":"^2.8.5","express":"^4.18.2","express-session":"^1.17.3","multer":"^2.0.2"}}
+{"name":"musica-api","version":"1.0.0","main":"server.js","dependencies":{"@google-cloud/firestore":"^8.3.0","@google-cloud/storage":"^7.19.0","cors":"^2.8.6","express":"^4.18.2","express-session":"^1.17.3","multer":"^2.0.2"}}
