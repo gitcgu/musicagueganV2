@@ -8,19 +8,19 @@
 <script src="https://unpkg.com/axios@1.4.0/dist/axios.min.js"></script>
 <script src="https://unpkg.com/wavesurfer.js"></script>
 <style>
-  body { margin: 0; background: #000; color: #fff; font-family: sans-serif; text-align: center; }
-  .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
-  .mode-switch { position: absolute; top: 20px; right: 20px; }
-  #waveform { width: 100%; max-width: 800px; height: 120px; margin: 20px 0; }
-  .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
-  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  body { margin:0; background:#000; color:#fff; font-family:sans-serif; text-align:center; }
+  .container { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; position:relative; }
+  .mode-switch { position:absolute; top:20px; right:20px; }
+  #waveform { width:100%; max-width:800px; height:120px; margin:20px 0; }
+  .controls button { margin:5px; padding:10px 20px; font-size:16px; cursor:pointer; }
+  button:disabled { opacity:0.6; cursor:not-allowed; }
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
+  <div class="container" :style="{ backgroundColor:bgColor, color:textColor }">
     <div class="mode-switch">
-      <button @click="toggleMode">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
+      <button @click="toggleMode">{{ mode==='mp3'?'Passer au MIX':'Passer au MP3' }}</button>
     </div>
 
     <h1>{{ songName }}</h1>
@@ -29,7 +29,7 @@
 
     <div class="controls">
       <button @click="previousSong" :disabled="isLoading">⏮</button>
-      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
+      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying?'⏸':'▶' }}</button>
       <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
       <button @click="nextSong" :disabled="isLoading">⏭</button>
     </div>
@@ -75,6 +75,7 @@ createApp({
       barWidth: 2,
       height: 120,
       responsive: true,
+      backend: 'MediaElement' // ✅ fix gros fichiers Mix
     });
 
     this.wavesurfer.on('ready', () => {
@@ -84,9 +85,7 @@ createApp({
     });
 
     this.wavesurfer.on('audioprocess', () => {
-      if (this.isPlaying) {
-        this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-      }
+      if (this.isPlaying) this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
     });
 
     this.wavesurfer.on('finish', () => {
@@ -95,7 +94,7 @@ createApp({
       this.nextSong();
     });
 
-    this.nextSong();
+    this.nextSong(); // lecture auto au montage
   },
   methods: {
     async fetchSong() {
@@ -117,9 +116,15 @@ createApp({
         this.globalLikeCount = data.likeCount || 0;
         this.globalDislikeCount = data.dislikeCount || 0;
 
-        //this.wavesurfer.un('ready');
-        this.isSongReady = false;
-        this.wavesurfer.load(this.songUrl, this.waveformUrl || undefined);
+        // 🔥 chargement correct JSON waveform
+        if (this.waveformUrl) {
+          const response = await fetch(this.waveformUrl);
+          const peaks = await response.json();
+          this.wavesurfer.load(this.songUrl, peaks);
+        } else {
+          this.wavesurfer.load(this.songUrl);
+        }
+
       } catch (e) {
         console.error('Erreur fetchSong:', e);
       } finally {
@@ -163,20 +168,14 @@ createApp({
         this.globalLikeCount = data.likeCount || 0;
         this.globalDislikeCount = data.dislikeCount || 0;
 
-        //this.wavesurfer.un('ready');
-        this.isSongReady = false;
-        this.isPlaying = false;
-        this.currentTime = '0:00';
-        this.duration = '0:00';
-        this.hasVoted = false;
+        if (this.waveformUrl) {
+          const response = await fetch(this.waveformUrl);
+          const peaks = await response.json();
+          this.wavesurfer.load(this.songUrl, peaks);
+        } else {
+          this.wavesurfer.load(this.songUrl);
+        }
 
-        this.wavesurfer.once('ready', () => {
-          this.isSongReady = true;
-          this.duration = this.formatTime(this.wavesurfer.getDuration());
-          this.playAudio();
-        });
-
-        this.wavesurfer.load(this.songUrl, this.waveformUrl || undefined);
       } catch (e) {
         console.error('Erreur previousSong:', e);
       } finally {
@@ -185,41 +184,28 @@ createApp({
     },
     toggleMode() {
       if (this.isLoading) return;
-      this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
+      this.mode = this.mode==='mp3'?'mix':'mp3';
       this.nextSong();
     },
     likeSong() {
       if (this.hasVoted) return;
       this.hasVoted = true;
-      axios.post('/api/song-feedback', { songName: this.fileName, feedback: 'like' }, { withCredentials: true })
-        .then(res => {
-          this.globalLikeCount = res.data.likeCount || 0;
-          this.globalDislikeCount = res.data.dislikeCount || 0;
-        })
-        .catch(err => {
-          console.error('Feedback like error:', err);
-          this.hasVoted = false;
-        });
+      axios.post('/api/song-feedback', { songName:this.fileName, feedback:'like' }, { withCredentials:true })
+        .then(res => { this.globalLikeCount = res.data.likeCount||0; this.globalDislikeCount = res.data.dislikeCount||0; })
+        .catch(err => { console.error(err); this.hasVoted=false; });
     },
     dislikeSong() {
       if (this.hasVoted) return;
       this.hasVoted = true;
-      axios.post('/api/song-feedback', { songName: this.fileName, feedback: 'dislike' }, { withCredentials: true })
-        .then(res => {
-          this.globalLikeCount = res.data.likeCount || 0;
-          this.globalDislikeCount = res.data.dislikeCount || 0;
-        })
-        .catch(err => {
-          console.error('Feedback dislike error:', err);
-          this.hasVoted = false;
-        });
+      axios.post('/api/song-feedback', { songName:this.fileName, feedback:'dislike' }, { withCredentials:true })
+        .then(res => { this.globalLikeCount = res.data.likeCount||0; this.globalDislikeCount = res.data.dislikeCount||0; })
+        .catch(err => { console.error(err); this.hasVoted=false; });
     },
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60);
-      return `${m}:${s < 10 ? '0' + s : s}`;
-    },
+      const m = Math.floor(sec/60), s=Math.floor(sec%60);
+      return `${m}:${s<10?'0'+s:s}`;
+    }
   }
 }).mount('#app');
 </script>
