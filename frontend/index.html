@@ -9,7 +9,6 @@
 <script src="https://unpkg.com/axios@1.4.0/dist/axios.min.js"></script>
 <script src="https://unpkg.com/wavesurfer.js@6"></script>
 <style>
-/* --- styles --- */
 body { margin:0; background:#000; color:#fff; font-family: sans-serif; text-align:center; }
 .container { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; box-sizing: border-box; position:relative; transition: background-color 0.5s, color 0.5s; }
 .song-title { font-size:2em; margin:20px 0; }
@@ -23,19 +22,13 @@ body { margin:0; background:#000; color:#fff; font-family: sans-serif; text-alig
   <div class="container" :style="{ backgroundColor:bgColor, color:textColor }">
 
     <div style="position:absolute; top:20px; right:20px;">
-      <button @click="toggleMode">{{ mode === 'mp3' ? 'Passer au Mode MIX' : 'Passer au Mode MP3' }}</button>
+      <button @click="toggleMode">{{ mode==='mp3' ? 'Passer au Mode MIX' : 'Passer au Mode MP3' }}</button>
     </div>
 
     <h1 class="song-title">{{ songName }}</h1>
 
-    <div v-show="mode==='mix'" style="width:100%; max-width:800px;">
-      <!-- CORRECTION : on supprime l'attribut `autoplay` -->
-      <audio ref="audioPlayer" :src="songUrl" controls @timeupdate="updateTime" @loadedmetadata="onMetadata" @ended="handleSongEnd" style="width:100%;"></audio>
-      <div>{{ currentTime }} / {{ duration }}</div>
-    </div>
-
-    <div v-show="mode==='mp3'" id="waveform"></div>
-    <div v-show="mode==='mp3'">{{ currentTime }} / {{ duration }}</div>
+    <div id="waveform"></div>
+    <div>{{ currentTime }} / {{ duration }}</div>
 
     <div class="controls">
       <button @click="handlePreviousClick">⏮</button>
@@ -61,6 +54,7 @@ createApp({
     return {
       songName: 'Chargement...',
       songUrl: '',
+      waveformUrl: '',
       fileName: '',
       bgColor: '#000',
       textColor: '#FFF',
@@ -85,24 +79,21 @@ createApp({
       responsive: true
     });
 
-    // CORRECTION : Le listener 'ready' ne fait plus de 'play'. Il prépare juste les données.
     this.wavesurfer.on('ready', () => {
       this.isSongReady = true;
       this.duration = this.formatTime(this.wavesurfer.getDuration());
     });
 
-    this.wavesurfer.on('audioprocess', () => { if (this.isPlaying) this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime()); });
+    this.wavesurfer.on('audioprocess', () => {
+      if (this.isPlaying) this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+    });
     this.wavesurfer.on('finish', this.handleSongEnd);
+
     this.fetchNextSongFromAPI();
   },
   methods: {
     stopAllAudio() {
       if (this.wavesurfer) this.wavesurfer.stop();
-      const audio = this.$refs.audioPlayer;
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-      }
       this.isPlaying = false;
     },
     toggleMode() {
@@ -111,45 +102,27 @@ createApp({
       this.fetchNextSongFromAPI();
     },
     togglePlay() {
-      if (this.mode === 'mix') {
-        const audio = this.$refs.audioPlayer;
-        if (audio) {
-          if (audio.paused) audio.play(); else audio.pause();
-          this.isPlaying = !audio.paused;
-        }
-      } else {
-        if (this.wavesurfer && this.isSongReady) {
-          this.wavesurfer.playPause();
-          this.isPlaying = this.wavesurfer.isPlaying();
-        }
+      if (this.isSongReady && this.wavesurfer) {
+        this.wavesurfer.playPause();
+        this.isPlaying = this.wavesurfer.isPlaying();
       }
     },
     replaySong() {
-      if (this.mode === 'mix') {
-        const audio = this.$refs.audioPlayer;
-        if (audio) {
-          audio.currentTime = 0;
-          audio.play();
-          this.isPlaying = true;
-        }
-      } else {
-        if (this.wavesurfer) {
-          this.wavesurfer.seekTo(0);
-          this.wavesurfer.play();
-          this.isPlaying = true;
-        }
+      if (this.wavesurfer) {
+        this.wavesurfer.seekTo(0);
+        this.wavesurfer.play();
+        this.isPlaying = true;
       }
     },
     async sendFeedbackToBackend(feedback) {
       if (this.hasVotedForCurrentSong) return;
       this.hasVotedForCurrentSong = true;
       try {
-        const response = await axios.post('/api/song-feedback', { songName: this.fileName, feedback }, { withCredentials: true });
+        const response = await axios.post('/api/song-feedback', { songName:this.fileName, feedback }, { withCredentials:true });
         this.globalLikeCount = response.data.likeCount || 0;
         this.globalDislikeCount = response.data.dislikeCount || 0;
       } catch (error) {
         if (error.response && error.response.status === 409) {
-          console.warn('Vote déjà enregistré.');
           alert(error.response.data.error);
         } else {
           console.error('Feedback ERROR', error);
@@ -162,34 +135,32 @@ createApp({
     async fetchSongFromAPI(endpoint) {
       this.stopAllAudio();
       try {
-        const response = await axios.get(endpoint, { withCredentials: true });
+        const response = await axios.get(endpoint, { withCredentials:true });
         this.processSongData(response.data);
       } catch (e) { console.error(`Erreur depuis ${endpoint}`, e); }
     },
     processSongData(data) {
       Object.assign(this, {
-        songName: data.songName, songUrl: data.url, fileName: data.fileName,
-        bgColor: data.color || '#000', textColor: data.textColor || '#FFF',
-        globalLikeCount: data.likeCount || 0, globalDislikeCount: data.dislikeCount || 0,
-        currentTime: '0:00', duration: '0:00', isPlaying: false, hasVotedForCurrentSong: false
+        songName: data.songName,
+        songUrl: data.url,
+        waveformUrl: data.waveformUrl,
+        fileName: data.fileName,
+        bgColor: data.color || '#000',
+        textColor: data.textColor || '#FFF',
+        globalLikeCount: data.likeCount || 0,
+        globalDislikeCount: data.dislikeCount || 0,
+        currentTime: '0:00',
+        duration: '0:00',
+        isPlaying: false,
+        hasVotedForCurrentSong: false
       });
-      
-      if (this.mode === 'mp3') {
-        this.isSongReady = false;
-        // CORRECTION : On utilise .once() pour donner un ordre de lecture à usage unique
+
+      this.isSongReady = false;
+      if (this.waveformUrl) {
+        this.wavesurfer.load(this.songUrl, this.waveformUrl);
         this.wavesurfer.once('ready', () => {
           this.wavesurfer.play();
           this.isPlaying = true;
-        });
-        this.$nextTick(() => { this.wavesurfer.load(this.songUrl); });
-      } else {
-        // CORRECTION : On donne un ordre de lecture explicite pour le mode mix
-        this.$nextTick(() => { 
-            const audio = this.$refs.audioPlayer;
-            if (audio) {
-              audio.play();
-              this.isPlaying = true;
-            }
         });
       }
     },
@@ -200,8 +171,8 @@ createApp({
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
       const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
-      return `${m}:${s < 10 ? '0' + s : s}`;
-    },
+      return `${m}:${s<10?'0'+s:s}`;
+    }
   }
 }).mount('#app');
 </script>
