@@ -4,160 +4,104 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Musica</title>
-<link rel="icon" type="image/png" href="/musica-icon.png">
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://unpkg.com/axios@1.4.0/dist/axios.min.js"></script>
 <script src="https://unpkg.com/wavesurfer.js@6"></script>
 <style>
-body { margin:0; background:#000; color:#fff; font-family:sans-serif; text-align:center; }
-.container { min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:20px; box-sizing:border-box; position:relative; transition: background-color 0.5s, color 0.5s; }
-.song-title { font-size:2em; margin:20px 0; }
-#waveform { width:100%; max-width:800px; height:120px; margin:20px 0; }
-.controls button { margin:5px; padding:10px 20px; font-size:16px; cursor:pointer; }
-.feedback-buttons button:disabled { cursor: not-allowed; opacity:0.6; }
+body{margin:0;background:#000;color:#fff;font-family:sans-serif;text-align:center;}
+.container{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:20px;box-sizing:border-box;position:relative;transition:background-color .5s,color .5s;}
+.song-title{font-size:2em;margin:20px 0;}
+#waveform{width:100%;max-width:800px;height:120px;margin:20px 0;}
+.controls button{margin:5px;padding:10px 20px;font-size:16px;cursor:pointer;}
+.feedback-buttons button:disabled{cursor:not-allowed;opacity:.6;}
 </style>
 </head>
 <body>
 <div id="app">
-  <div class="container" :style="{ backgroundColor:bgColor, color:textColor }">
-    <div style="position:absolute; top:20px; right:20px;">
-      <button @click="toggleMode">{{ mode === 'mp3' ? 'Passer au Mix' : 'Passer au MP3' }}</button>
-    </div>
-
-    <h1 class="song-title">{{ songName }}</h1>
-    <div id="waveform"></div>
-    <div>{{ currentTime }} / {{ duration }}</div>
-
-    <div class="controls">
-      <button @click="handlePreviousClick">⏮</button>
-      <button @click="togglePlay">{{ isPlaying ? '⏸' : '▶' }}</button>
-      <button @click="replaySong">↻</button>
-      <button @click="handleNextClick">⏭</button>
-    </div>
-
-    <div class="feedback-buttons">
-      <button @click="likeSong" :disabled="hasVotedForCurrentSong">❤️ J'aime</button>
-      <button @click="dislikeSong" :disabled="hasVotedForCurrentSong">👎 Pas intéressé</button>
-    </div>
-    <div>❤️ {{ globalLikeCount }} | 👎 {{ globalDislikeCount }}</div>
+<div class="container" :style="{backgroundColor:bgColor,color:textColor}">
+  <div style="position:absolute;top:20px;right:20px;">
+    <button @click="toggleMode">{{ mode==='mp3'?'Passer au Mix':'Passer au MP3' }}</button>
   </div>
+
+  <h1 class="song-title">{{ songName }}</h1>
+
+  <div id="waveform"></div>
+  <div>{{ currentTime }} / {{ duration }}</div>
+
+  <div class="controls">
+    <button @click="handlePreviousClick">⏮</button>
+    <button @click="togglePlay">{{ isPlaying?'⏸':'▶' }}</button>
+    <button @click="replaySong">↻</button>
+    <button @click="handleNextClick">⏭</button>
+  </div>
+
+  <div class="feedback-buttons">
+    <button @click="likeSong" :disabled="hasVotedForCurrentSong">❤️ J'aime</button>
+    <button @click="dislikeSong" :disabled="hasVotedForCurrentSong">👎 Pas intéressé</button>
+  </div>
+  <div>❤️ {{ globalLikeCount }} | 👎 {{ globalDislikeCount }}</div>
+</div>
 </div>
 
 <script>
 const { createApp } = Vue;
-
 createApp({
-  data() {
-    return {
-      songName: 'Chargement...',
-      songUrl: '',
-      bgColor: '#000',
-      textColor: '#FFF',
-      mode: 'mp3',
-      isPlaying: false,
-      wavesurfer: null,
-      isSongReady: false,
-      currentTime: '0:00',
-      duration: '0:00',
-      globalLikeCount: 0,
-      globalDislikeCount: 0,
-      hasVotedForCurrentSong: false,
-      fileName: ''
-    };
-  },
-  mounted() {
+  data(){ return {
+    songName:'Chargement...', fileName:'', audioUrl:'', waveformUrl:'',
+    bgColor:'#000', textColor:'#FFF', mode:'mp3', isPlaying:false,
+    wavesurfer:null, isSongReady:false, currentTime:'0:00', duration:'0:00',
+    globalLikeCount:0, globalDislikeCount:0, hasVotedForCurrentSong:false
+  }},
+  mounted(){
     this.wavesurfer = WaveSurfer.create({
-      container: '#waveform',
-      waveColor: 'rgb(200,100,200)',
-      progressColor: 'rgb(255,100,100)',
-      barWidth: 2,
-      height: 120,
-      responsive: true
+      container:'#waveform',
+      waveColor:'rgb(200,100,200)',
+      progressColor:'rgb(255,100,100)',
+      barWidth:2,
+      height:120,
+      responsive:true
     });
-
-    this.wavesurfer.on('ready', () => {
-      this.isSongReady = true;
-      this.duration = this.formatTime(this.wavesurfer.getDuration());
-      this.wavesurfer.play();
-      this.isPlaying = true;
-    });
-
-    this.wavesurfer.on('audioprocess', () => {
-      if (this.isPlaying) this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-    });
-
-    this.wavesurfer.on('finish', this.handleSongEnd);
-
-    this.fetchNextSong();
+    this.wavesurfer.on('ready',()=>{ this.isSongReady=true; this.duration=this.formatTime(this.wavesurfer.getDuration()); });
+    this.wavesurfer.on('audioprocess',()=>{if(this.isPlaying)this.currentTime=this.formatTime(this.wavesurfer.getCurrentTime());});
+    this.wavesurfer.on('finish',this.handleSongEnd);
+    this.fetchNextSongFromAPI();
   },
-  methods: {
-    toggleMode() {
-      this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
-      this.fetchNextSong();
+  methods:{
+    stopAllAudio(){ if(this.wavesurfer)this.wavesurfer.stop(); this.isPlaying=false; },
+    toggleMode(){ this.stopAllAudio(); this.mode=this.mode==='mp3'?'mix':'mp3'; this.fetchNextSongFromAPI(); },
+    togglePlay(){ if(this.wavesurfer && this.isSongReady){ this.wavesurfer.playPause(); this.isPlaying=this.wavesurfer.isPlaying(); }},
+    replaySong(){ if(this.wavesurfer){ this.wavesurfer.seekTo(0); this.wavesurfer.play(); this.isPlaying=true; }},
+    async sendFeedbackToBackend(feedback){
+      if(this.hasVotedForCurrentSong)return;
+      this.hasVotedForCurrentSong=true;
+      try{
+        const res=await axios.post('/api/song-feedback',{songName:this.fileName,feedback},{withCredentials:true});
+        this.globalLikeCount=res.data.likeCount||0; this.globalDislikeCount=res.data.dislikeCount||0;
+      }catch(err){ console.error(err); this.hasVotedForCurrentSong=false; }
     },
-    stopAudio() {
-      if (this.wavesurfer) this.wavesurfer.stop();
-      this.isPlaying = false;
-    },
-    togglePlay() {
-      if (this.isSongReady && this.wavesurfer) {
-        this.wavesurfer.playPause();
-        this.isPlaying = this.wavesurfer.isPlaying();
-      }
-    },
-    replaySong() {
-      if (this.wavesurfer) {
-        this.wavesurfer.seekTo(0);
-        this.wavesurfer.play();
-        this.isPlaying = true;
-      }
-    },
-    async fetchNextSong() {
-      this.stopAudio();
-      try {
-        const res = await axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials:true });
-        this.processSongData(res.data);
-      } catch(e) { console.error(e); }
-    },
-    processSongData(data) {
-      this.songName = data.songName;
-      this.fileName = data.songFileName;
-      this.songUrl = data.waveformUrl;
-      this.bgColor = data.color || '#000';
-      this.textColor = data.textColor || '#FFF';
-      this.globalLikeCount = data.likeCount || 0;
-      this.globalDislikeCount = data.dislikeCount || 0;
-      this.currentTime = '0:00';
-      this.duration = '0:00';
-      this.hasVotedForCurrentSong = false;
-      this.isSongReady = false;
-
-      this.$nextTick(() => {
-        if (this.wavesurfer) this.wavesurfer.load(this.songUrl);
+    likeSong(){ this.sendFeedbackToBackend('like'); },
+    dislikeSong(){ this.sendFeedbackToBackend('dislike'); },
+    async fetchSongFromAPI(endpoint){ try{ const res=await axios.get(endpoint,{withCredentials:true}); this.processSongData(res.data); }catch(e){console.error(e);} },
+    processSongData(data){
+      Object.assign(this,{ songName:data.songName, fileName:data.songFileName, audioUrl:data.audioUrl, waveformUrl:data.waveformUrl,
+        bgColor:data.color||'#000', textColor:data.textColor||'#FFF',
+        globalLikeCount:data.likeCount||0, globalDislikeCount:data.dislikeCount||0,
+        currentTime:'0:00', duration:'0:00', isPlaying:false, hasVotedForCurrentSong:false, isSongReady:false
+      });
+      this.$nextTick(()=>{
+        if(this.wavesurfer){
+          this.wavesurfer.load(data.audioUrl, data.waveformUrl);
+          this.wavesurfer.once('ready',()=>{ this.isPlaying=true; this.wavesurfer.play(); });
+        }
       });
     },
-    handleSongEnd() { this.fetchNextSong(); },
-    handleNextClick() { this.fetchNextSong(); },
-    handlePreviousClick() { this.fetchNextSong(); },
-    async sendFeedbackToBackend(feedback) {
-      if (this.hasVotedForCurrentSong) return;
-      this.hasVotedForCurrentSong = true;
-      try {
-        const response = await axios.post('/api/song-feedback', { songName: this.fileName, feedback }, { withCredentials:true });
-        this.globalLikeCount = response.data.likeCount || 0;
-        this.globalDislikeCount = response.data.dislikeCount || 0;
-      } catch(e) {
-        console.error(e);
-        this.hasVotedForCurrentSong = false;
-      }
+    handleSongEnd(){ this.fetchNextSongFromAPI(); },
+    fetchNextSongFromAPI(){ this.fetchSongFromAPI(`/api/next-song?mode=${this.mode}`); },
+    handleNextClick(){ this.fetchNextSongFromAPI(); },
+    handlePreviousClick(){ 
+      this.fetchSongFromAPI(`/api/previous-song?mode=${this.mode}`);
     },
-    likeSong() { this.sendFeedbackToBackend('like'); },
-    dislikeSong() { this.sendFeedbackToBackend('dislike'); },
-    formatTime(sec) {
-      if (!sec || !isFinite(sec)) return '0:00';
-      const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
-      return `${m}:${s<10?'0'+s:s}`;
-    }
+    formatTime(sec){ if(!sec||!isFinite(sec))return '0:00'; const m=Math.floor(sec/60),s=Math.floor(sec%60); return `${m}:${s<10?'0'+s:s}`; }
   }
 }).mount('#app');
 </script>
