@@ -11,41 +11,49 @@ const db = new Firestore({ databaseId: 'music-db' });
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// --- Middleware ---
+// === Middleware ===
 app.use(cors({
-  origin: ['https://musicabackend.uc.r.appspot.com','https://musicaguegan.netlify.app'],
+  origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
   credentials: true
 }));
+
 app.use(express.json());
 app.use(session({
   secret: 'musica-secret-2025',
   resave: false,
   saveUninitialized: true,
-  cookie: { secure:'auto', httpOnly:true, maxAge:86400000 }
+  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }
 }));
 
-const FRONTEND_DIR = path.join(__dirname,'frontend');
+// === Frontend ===
+const FRONTEND_DIR = path.join(__dirname, 'frontend');
 app.use(express.static(FRONTEND_DIR));
-app.get('/favicon.ico', (req,res)=>res.status(204).send());
+app.get('/favicon.ico', (req, res) => res.status(204).send());
 
-// --- Buckets ---
+// === Buckets ===
 const MP3_BUCKET_NAME = 'musica-mp3-bucket';
 const MIX_BUCKET_NAME = 'musica-mix-bucket';
-const WAVE_FOLDER = 'waveforms/'; // JSON stocké ici
+const WAVE_FOLDER = 'waveforms/';
 
-// --- Cache simple ---
-const caches = {};
+// === Caches pour fichiers ===
+const caches = {
+  [MP3_BUCKET_NAME]: { files: null, loadedAt: 0 },
+  [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
+};
 
-// --- Utilitaires ---
-async function getAllMp3(bucketName) {
+// =========================================================================
+// == UTILITAIRES
+// =========================================================================
+async function getAllFiles(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
   if (cache && cache.files && (now - cache.loadedAt < 10*60*1000)) return cache.files;
 
   const [files] = await storage.bucket(bucketName).getFiles();
-  const mp3Files = files.map(f=>f.name).filter(f=>f.endsWith('.mp3'));
-
-  caches[bucketName] = { files: mp3Files, loadedAt: now };
+  const mp3Files = files.filter(f => f.name.endsWith('.mp3')).map(f => f.name);
+  if (!caches[bucketName]) caches[bucketName] = {};
+  caches[bucketName].files = mp3Files;
+  caches[bucketName].loadedAt = now;
   return mp3Files;
 }
 
@@ -55,106 +63,131 @@ async function getSongStats(songName) {
     if (!doc.exists) return { likeCount:0, dislikeCount:0 };
     return doc.data();
   } catch(e) {
-    console.error('Firestore error', e.message);
+    console.error('Firestore getSongStats error', e.message);
     return { likeCount:0, dislikeCount:0 };
   }
 }
 
-// --- Routes API ---
-app.get('/api/next-song', async (req,res)=>{
+async function getSignedUrl(bucketName, fileName) {
+  const file = storage.bucket(bucketName).file(fileName);
+  const [url] = await file.getSignedUrl({ action:'read', expires:Date.now()+60*60*1000, version:'v4' });
+  return url;
+}
+
+function getWaveformPath(fileName) {
+  return WAVE_FOLDER + fileName.replace('.mp3','.json');
+}
+
+// =========================================================================
+// == ROUTES API
+// =========================================================================
+
+// GET next-song
+app.get('/api/next-song', async (req,res) => {
   try {
-    const mode = req.query.mode || 'mp3';
-    const bucketName = mode==='mix'?MIX_BUCKET_NAME:MP3_BUCKET_NAME;
+    const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
+    const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
 
-    if (!req.session.playedSongs) req.session.playedSongs={};
-    if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName]=[];
+    if (!req.session.playedSongs) req.session.playedSongs = {};
+    if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName] = [];
 
-    const allSongs = await getAllMp3(bucketName);
+    const allSongs = await getAllFiles(bucketName);
     let played = req.session.playedSongs[bucketName];
-    let available = allSongs.filter(s=>!played.includes(s));
-    if (available.length===0){ req.session.playedSongs[bucketName]=[]; available=allSongs; }
-    if (available.length===0) return res.status(404).json({error:'Aucune chanson trouvée'});
+    let available = allSongs.filter(s => !played.includes(s));
+
+    if (available.length === 0) { req.session.playedSongs[bucketName]=[]; available=allSongs; }
+    if (available.length===0) return res.status(404).json({error:`Aucune chanson trouvée dans ${bucketName}`});
 
     const song = available[Math.floor(Math.random()*available.length)];
     req.session.playedSongs[bucketName].push(song);
 
-    // URLs signées
-    const audioFile = storage.bucket(bucketName).file(song);
-    const [audioUrl] = await audioFile.getSignedUrl({ action:'read', expires:Date.now()+60*60*1000, version:'v4' });
-
-    const waveformFile = storage.bucket(bucketName).file(WAVE_FOLDER + song.replace('.mp3','.json'));
-    const [waveformUrl] = await waveformFile.getSignedUrl({ action:'read', expires:Date.now()+60*60*1000, version:'v4' });
-
+    const audioUrl = await getSignedUrl(bucketName, song);
+    const waveformUrl = await getSignedUrl(bucketName, getWaveformPath(song));
     const { likeCount, dislikeCount } = await getSongStats(song);
+
     const color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6,'0');
     const inverse = '#' + (16777215 - parseInt(color.substring(1),16)).toString(16).padStart(6,'0');
 
     res.json({
       songName: song.replace('.mp3',''),
-      songFileName: song,
-      audioUrl,      // MP3 réel
-      waveformUrl,   // JSON waveform
-      color,
-      textColor:inverse,
+      fileName: song,
+      url: audioUrl,
+      waveformUrl: waveformUrl,
+      color: color,
+      textColor: inverse,
       likeCount,
       dislikeCount
     });
 
-  } catch(err){
-    console.error(err.stack);
+  } catch(err) {
+    console.error('/api/next-song ERROR', err);
     res.status(500).json({error:'Erreur serveur'});
   }
 });
 
-app.get('/api/previous-song', async (req,res)=>{
+// GET previous-song
+app.get('/api/previous-song', async (req,res) => {
   try {
-    const mode = req.query.mode || 'mp3';
-    const bucketName = mode==='mix'?MIX_BUCKET_NAME:MP3_BUCKET_NAME;
+    const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
+    const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
 
     if (!req.session.playedSongs || !req.session.playedSongs[bucketName] || req.session.playedSongs[bucketName].length<2)
       return res.status(400).json({error:'Pas de chanson précédente'});
 
     req.session.playedSongs[bucketName].pop();
-    const song = req.session.playedSongs[bucketName].slice(-1)[0];
+    const played = req.session.playedSongs[bucketName];
+    const song = played[played.length-1];
 
-    const audioFile = storage.bucket(bucketName).file(song);
-    const [audioUrl] = await audioFile.getSignedUrl({ action:'read', expires:Date.now()+60*60*1000, version:'v4' });
-    const waveformFile = storage.bucket(bucketName).file(WAVE_FOLDER + song.replace('.mp3','.json'));
-    const [waveformUrl] = await waveformFile.getSignedUrl({ action:'read', expires:Date.now()+60*60*1000, version:'v4' });
-
+    const audioUrl = await getSignedUrl(bucketName,song);
+    const waveformUrl = await getSignedUrl(bucketName,getWaveformPath(song));
     const { likeCount, dislikeCount } = await getSongStats(song);
+
     res.json({
       songName: song.replace('.mp3',''),
-      songFileName: song,
-      audioUrl,
-      waveformUrl,
-      color:'#000', textColor:'#FFF',
-      likeCount, dislikeCount
+      fileName: song,
+      url: audioUrl,
+      waveformUrl: waveformUrl,
+      color:'#000',
+      textColor:'#FFF',
+      likeCount,
+      dislikeCount
     });
 
-  } catch(err){ res.status(500).json({error:'Erreur serveur'}); }
+  } catch(err) {
+    console.error('/api/previous-song ERROR', err);
+    res.status(500).json({error:'Erreur serveur'});
+  }
 });
 
-app.post('/api/song-feedback', async (req,res)=>{
+// POST song-feedback
+app.post('/api/song-feedback', async (req,res) => {
   try {
     const { songName, feedback } = req.body;
     if (!songName || !feedback) return res.status(400).json({error:'Données manquantes'});
-    if (!req.session.votedSongs) req.session.votedSongs={};
-    if (req.session.votedSongs[songName]) return res.status(409).json({error:'Vote déjà enregistré'});
+
+    if (!req.session.votedSongs) req.session.votedSongs = {};
+    if (req.session.votedSongs[songName]) return res.status(409).json({error:'Déjà voté pour cette chanson'});
 
     const statsRef = db.collection('song_stats').doc(songName);
-    if (feedback==='like') await statsRef.set({likeCount: FieldValue.increment(1)}, {merge:true});
-    else if (feedback==='dislike') await statsRef.set({dislikeCount: FieldValue.increment(1)}, {merge:true});
-    else return res.status(400).json({error:'Feedback invalide'});
+    if (feedback==='like') await statsRef.set({likeCount:FieldValue.increment(1)},{merge:true});
+    else if(feedback==='dislike') await statsRef.set({dislikeCount:FieldValue.increment(1)},{merge:true});
+    else return res.status(400).json({error:'Feedback non valide'});
 
-    req.session.votedSongs[songName]=true;
+    req.session.votedSongs[songName] = true;
     const statsDoc = await statsRef.get();
-    const data = statsDoc.data()||{likeCount:0, dislikeCount:0};
-    res.json({success:true, likeCount:data.likeCount||0, dislikeCount:data.dislikeCount||0});
-  } catch(e){ res.status(500).json({error:'Erreur serveur'}); }
+    const data = statsDoc.data() || {likeCount:0, dislikeCount:0};
+    res.json({success:true, likeCount:data.likeCount, dislikeCount:data.dislikeCount});
+  } catch(e) {
+    console.error('FEEDBACK ERROR', e.stack);
+    res.status(500).json({error:'Erreur serveur'});
+  }
 });
 
 // Frontend
-app.get('/', (req,res)=> res.sendFile(path.join(FRONTEND_DIR,'index.html')));
+app.get('/', (req,res) => {
+  res.sendFile(path.join(FRONTEND_DIR,'index.html'));
+});
 
-app.listen(PORT,'0.0.0.0',()=>console.log(`API sur http://0.0.0.0:${PORT}`));
+// Lancement serveur
+const HOST = '0.0.0.0';
+app.listen(PORT, HOST, () => console.log(`🎵 API sur http://${HOST}:${PORT}`));
