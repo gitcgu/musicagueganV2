@@ -6,7 +6,9 @@ const { Storage } = require('@google-cloud/storage');
 const { Firestore, FieldValue } = require('@google-cloud/firestore');
 
 const storage = new Storage();
-const db = new Firestore();
+//const db = new Firestore();
+const db = new Firestore({ databaseId: 'music-db' });
+
 const app = express();
 const PORT = process.env.PORT || 8080;
 
