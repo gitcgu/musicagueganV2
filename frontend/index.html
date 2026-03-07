@@ -117,7 +117,7 @@ createApp({
         this.globalLikeCount = data.likeCount || 0;
         this.globalDislikeCount = data.dislikeCount || 0;
 
-        this.wavesurfer.un('ready');
+        //this.wavesurfer.un('ready');
         this.isSongReady = false;
         this.wavesurfer.load(this.songUrl, this.waveformUrl || undefined);
       } catch (e) {
@@ -163,7 +163,7 @@ createApp({
         this.globalLikeCount = data.likeCount || 0;
         this.globalDislikeCount = data.dislikeCount || 0;
 
-        this.wavesurfer.un('ready');
+        //this.wavesurfer.un('ready');
         this.isSongReady = false;
         this.isPlaying = false;
         this.currentTime = '0:00';
