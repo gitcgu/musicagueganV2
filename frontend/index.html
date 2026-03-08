@@ -117,13 +117,31 @@ createApp({
         this.globalDislikeCount = data.dislikeCount || 0;
 
         // 🔥 chargement correct JSON waveform
-        if (this.waveformUrl) {
-          const response = await fetch(this.waveformUrl);
-          const peaks = await response.json();
-          this.wavesurfer.load(this.songUrl, peaks);
+    //    if (this.waveformUrl) {
+    //      const response = await fetch(this.waveformUrl);
+    //      const peaks = await response.json();
+    //      this.wavesurfer.load(this.songUrl, peaks);
+    //    } else {
+    //      this.wavesurfer.load(this.songUrl);
+    //    }
+
+        this.wavesurfer.un('ready');
+        //this.isSongReady = false;
+
+// si waveformUrl existe, on essaie de charger la waveform
+         if (this.waveformUrl) {
+         try {
+             this.wavesurfer.load(this.songUrl, this.waveformUrl);
+             } catch(e) {
+                console.warn('JSON waveform invalide, chargement direct du MP3', e);
+              this.wavesurfer.load(this.songUrl);
+            } 
         } else {
-          this.wavesurfer.load(this.songUrl);
+  // pas de JSON, chargement direct du MP3
+         this.wavesurfer.load(this.songUrl);
         }
+
+        
 
       } catch (e) {
         console.error('Erreur fetchSong:', e);
@@ -168,14 +186,31 @@ createApp({
         this.globalLikeCount = data.likeCount || 0;
         this.globalDislikeCount = data.dislikeCount || 0;
 
-        if (this.waveformUrl) {
-          const response = await fetch(this.waveformUrl);
-          const peaks = await response.json();
-          this.wavesurfer.load(this.songUrl, peaks);
-        } else {
-          this.wavesurfer.load(this.songUrl);
-        }
+//        if (this.waveformUrl) {
+//          const response = await fetch(this.waveformUrl);
+//          const peaks = await response.json();
+//          this.wavesurfer.load(this.songUrl, peaks);
+//        } else {
+//          this.wavesurfer.load(this.songUrl);
+//        }
+           this.wavesurfer.un('ready');
+//this.isSongReady = false;
 
+// si waveformUrl existe, on essaie de charger la waveform
+if (this.waveformUrl) {
+  try {
+    this.wavesurfer.load(this.songUrl, this.waveformUrl);
+  } catch(e) {
+    console.warn('JSON waveform invalide, chargement direct du MP3', e);
+    this.wavesurfer.load(this.songUrl);
+  }
+} else {
+  // pas de JSON, chargement direct du MP3
+  this.wavesurfer.load(this.songUrl);
+}
+
+
+        
       } catch (e) {
         console.error('Erreur previousSong:', e);
       } finally {
