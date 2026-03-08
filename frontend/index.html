@@ -78,20 +78,11 @@ createApp({
     });
 
 
-    // Débloquer l'audio au premier clic/touch
-const unlockAudio = () => {
-  const ctx = this.wavesurfer.backend.getAudioContext();
-  if (ctx && ctx.state === 'suspended') ctx.resume();
-};
-document.body.addEventListener('click', unlockAudio, { once: true });
-document.body.addEventListener('touchstart', unlockAudio, { once: true });
-
     
     this.wavesurfer.on('ready', () => {
       this.isSongReady = true;
       this.duration = this.formatTime(this.wavesurfer.getDuration());
-      // ne plus appeler audio automatiquemnt
-      // this.playAudio();
+      this.playAudio();
     });
 
     this.wavesurfer.on('audioprocess', () => {
