@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 8080;
 const MP3_BUCKET_NAME = 'musica-mp3-bucket';
 const MIX_BUCKET_NAME = 'musica-mix-bucket';
 const WAVE_FOLDER = 'waveforms/';
-const POCHETTE_FILENAME = 'pochettes/pochette.jpg';  // ✅ AJOUTE CETTE LIGNE
+const POCHETTE_FILENAME = 'pochettes/pochette.jpg';
 
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
@@ -48,45 +48,6 @@ async function getAllMp3(bucketName) {
   return fileNames;
 }
 
-async function getSignedUrl(bucketName, fileName) {
-  const file = storage.bucket(bucketName).file(fileName);
-  const [url] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 60 * 60 * 1000,
-    version: 'v4',
-  });
-  return url;
-}
-
-async function getWaveformUrl(bucketName, fileName) {
-  const jsonFileName = WAVE_FOLDER + fileName.replace('.mp3', '.json');
-  const file = storage.bucket(bucketName).file(jsonFileName);
-  const [exists] = await file.exists();
-  if (!exists) return null;
-  const [url] = await file.getSignedUrl({
-    action: 'read',
-    expires: Date.now() + 60 * 60 * 1000,
-    version: 'v4',
-  });
-  return url;
-}
-
-// ✅ AJOUTE CETTE FONCTION POUR LA POCHETTE
-async function getPochetteUrl() {
-  try {
-    const file = storage.bucket(MP3_BUCKET_NAME).file(POCHETTE_FILENAME);
-    const [url] = await file.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 60 * 60 * 1000,
-      version: 'v4',
-    });
-    return url;
-  } catch (e) {
-    console.error('Erreur pochette:', e);
-    return null;
-  }
-}
-
 async function getSongStats(songName) {
   try {
     const doc = await db.collection('song_stats').doc(songName).get();
@@ -96,6 +57,72 @@ async function getSongStats(songName) {
     return { likeCount: 0, dislikeCount: 0 };
   }
 }
+
+// ✅ SERVIR WAVEFORM JSON
+app.get('/api/waveform/:fileName', async (req, res) => {
+  try {
+    const fileName = req.params.fileName;
+    const jsonFileName = WAVE_FOLDER + fileName.replace('.mp3', '.json');
+    
+    const file = storage.bucket(MP3_BUCKET_NAME).file(jsonFileName);
+    const [exists] = await file.exists();
+    
+    if (!exists) {
+      return res.status(404).json({ error: 'Waveform not found' });
+    }
+    
+    const [content] = await file.download();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(content);
+  } catch (e) {
+    console.error('Erreur waveform:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ✅ SERVIR MP3
+app.get('/api/audio/:fileName', async (req, res) => {
+  try {
+    const fileName = req.params.fileName;
+    
+    const file = storage.bucket(MP3_BUCKET_NAME).file(fileName);
+    const [exists] = await file.exists();
+    
+    if (!exists) {
+      return res.status(404).json({ error: 'Audio not found' });
+    }
+    
+    const [content] = await file.download();
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.send(content);
+  } catch (e) {
+    console.error('Erreur audio:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// ✅ SERVIR POCHETTE
+app.get('/api/cover', async (req, res) => {
+  try {
+    const file = storage.bucket(MP3_BUCKET_NAME).file(POCHETTE_FILENAME);
+    const [exists] = await file.exists();
+    
+    if (!exists) {
+      return res.status(404).json({ error: 'Cover not found' });
+    }
+    
+    const [content] = await file.download();
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(content);
+  } catch (e) {
+    console.error('Erreur cover:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
 
 app.get('/api/next-song', async (req, res) => {
   try {
@@ -118,20 +145,18 @@ app.get('/api/next-song', async (req, res) => {
     const song = available[Math.floor(Math.random() * available.length)];
     req.session.playedSongs[bucketName].push(song);
 
-    const url = await getSignedUrl(bucketName, song);
-    const waveformUrl = await getWaveformUrl(bucketName, song);
-    const imageUrl = await getPochetteUrl();  // ✅ AJOUTE CETTE LIGNE
     const stats = await getSongStats(song);
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
 
+    // ✅ UTILISER LES ROUTES PROXY
     res.json({
       songName: song.replace('.mp3', ''),
       fileName: song,
-      url,
-      waveformUrl,
-      imageUrl,  // ✅ AJOUTE CETTE LIGNE
+      url: `/api/audio/${encodeURIComponent(song)}`,
+      waveformUrl: `/api/waveform/${encodeURIComponent(song)}`,
+      imageUrl: '/api/cover',
       color,
       textColor: inverse,
       likeCount: stats.likeCount || 0,
@@ -155,17 +180,15 @@ app.get('/api/previous-song', async (req, res) => {
     req.session.playedSongs[bucketName].pop();
     const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
 
-    const url = await getSignedUrl(bucketName, song);
-    const waveformUrl = await getWaveformUrl(bucketName, song);
-    const imageUrl = await getPochetteUrl();  // ✅ AJOUTE CETTE LIGNE
     const stats = await getSongStats(song);
 
+    // ✅ UTILISER LES ROUTES PROXY
     res.json({
       songName: song.replace('.mp3', ''),
       fileName: song,
-      url,
-      waveformUrl,
-      imageUrl,  // ✅ AJOUTE CETTE LIGNE
+      url: `/api/audio/${encodeURIComponent(song)}`,
+      waveformUrl: `/api/waveform/${encodeURIComponent(song)}`,
+      imageUrl: '/api/cover',
       color: '#000000',
       textColor: '#FFFFFF',
       likeCount: stats.likeCount || 0,
