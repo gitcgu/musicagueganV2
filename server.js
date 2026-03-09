@@ -14,6 +14,7 @@ const PORT = process.env.PORT || 8080;
 const MP3_BUCKET_NAME = 'musica-mp3-bucket';
 const MIX_BUCKET_NAME = 'musica-mix-bucket';
 const WAVE_FOLDER = 'waveforms/';
+const POCHETTE_FILENAME = 'pochette.jpg';  // ✅ AJOUTE CETTE LIGNE
 
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
@@ -32,7 +33,6 @@ const FRONTEND_DIR = path.join(__dirname, 'frontend');
 app.use(express.static(FRONTEND_DIR));
 app.get('/favicon.ico', (req, res) => res.status(204).send());
 
-// Cache simple pour éviter trop de fetch GCS
 const caches = {
   [MP3_BUCKET_NAME]: { files: null, loadedAt: 0 },
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
@@ -71,6 +71,22 @@ async function getWaveformUrl(bucketName, fileName) {
   return url;
 }
 
+// ✅ AJOUTE CETTE FONCTION POUR LA POCHETTE
+async function getPochetteUrl() {
+  try {
+    const file = storage.bucket(MP3_BUCKET_NAME).file(POCHETTE_FILENAME);
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000,
+      version: 'v4',
+    });
+    return url;
+  } catch (e) {
+    console.error('Erreur pochette:', e);
+    return null;
+  }
+}
+
 async function getSongStats(songName) {
   try {
     const doc = await db.collection('song_stats').doc(songName).get();
@@ -104,6 +120,7 @@ app.get('/api/next-song', async (req, res) => {
 
     const url = await getSignedUrl(bucketName, song);
     const waveformUrl = await getWaveformUrl(bucketName, song);
+    const imageUrl = await getPochetteUrl();  // ✅ AJOUTE CETTE LIGNE
     const stats = await getSongStats(song);
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
@@ -114,6 +131,7 @@ app.get('/api/next-song', async (req, res) => {
       fileName: song,
       url,
       waveformUrl,
+      imageUrl,  // ✅ AJOUTE CETTE LIGNE
       color,
       textColor: inverse,
       likeCount: stats.likeCount || 0,
@@ -134,11 +152,12 @@ app.get('/api/previous-song', async (req, res) => {
       return res.status(400).json({ error: 'Pas de chanson précédente' });
     }
 
-    req.session.playedSongs[bucketName].pop(); // supprime la dernière jouée
+    req.session.playedSongs[bucketName].pop();
     const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
 
     const url = await getSignedUrl(bucketName, song);
     const waveformUrl = await getWaveformUrl(bucketName, song);
+    const imageUrl = await getPochetteUrl();  // ✅ AJOUTE CETTE LIGNE
     const stats = await getSongStats(song);
 
     res.json({
@@ -146,6 +165,7 @@ app.get('/api/previous-song', async (req, res) => {
       fileName: song,
       url,
       waveformUrl,
+      imageUrl,  // ✅ AJOUTE CETTE LIGNE
       color: '#000000',
       textColor: '#FFFFFF',
       likeCount: stats.likeCount || 0,
