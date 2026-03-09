@@ -67,79 +67,124 @@ createApp({
       textColor: '#fff',
     };
   },
-  mounted() {
-    this.wavesurfer = WaveSurfer.create({
-      container: '#waveform',
-      waveColor: '#b264b2',
-      progressColor: '#ff6464',
-      barWidth: 2,
-      height: 120,
-      responsive: true,
-    });
+mounted() {
+  this.wavesurfer = WaveSurfer.create({
+    container: '#waveform',
+    waveColor: '#b264b2',
+    progressColor: '#ff6464',
+    barWidth: 2,
+    height: 120,
+    responsive: true,
+  });
 
+  // ✅ Utiliser une méthode réutilisable
+  this.attachReadyListener();
 
-    
-    this.wavesurfer.on('ready', () => {
+  this.wavesurfer.on('audioprocess', () => {
+    if (this.isPlaying) this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+  });
+
+  this.wavesurfer.on('finish', () => {
+    this.isPlaying = false;
+    this.currentTime = this.duration;
+    this.nextSong();
+  });
+
+  this.nextSong();
+},
+
+methods: {
+  attachReadyListener() {
+    this.wavesurfer.once('ready', () => {
       this.isSongReady = true;
       this.duration = this.formatTime(this.wavesurfer.getDuration());
       this.playAudio();
     });
-
-    this.wavesurfer.on('audioprocess', () => {
-      if (this.isPlaying) this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-    });
-
-    this.wavesurfer.on('finish', () => {
-      this.isPlaying = false;
-      this.currentTime = this.duration;
-      this.nextSong();
-    });
-
-    this.nextSong();
   },
-  methods: {
-    async fetchSong() {
+
+  async fetchSong() {
+    this.isLoading = true;
+    this.isSongReady = false;
+    this.isPlaying = false;
+    this.currentTime = '0:00';
+    this.duration = '0:00';
+    this.hasVoted = false;
+
+    try {
+      const res = await axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true });
+      const data = res.data;
+
+      this.songName = data.songName;
+      this.songUrl = data.url;
+      this.fileName = data.fileName;
+      this.globalLikeCount = data.likeCount || 0;
+      this.globalDislikeCount = data.dislikeCount || 0;
+      this.waveformUrl = data.waveformUrl || '';
+
+      let peaks = undefined;
+
+      if (this.waveformUrl) {
+        try {
+          const r = await fetch(this.waveformUrl);
+          const json = await r.json();
+          if (Array.isArray(json) && json.length > 0) peaks = json;
+        } catch (e) {
+          console.warn('Impossible de charger le JSON waveform:', e);
+        }
+      }
+
+      // ✅ Rajouter le listener avant de charger
+      this.attachReadyListener();
+      this.wavesurfer.load(this.songUrl, peaks);
+
+    } catch (e) {
+      console.error('Erreur fetchSong:', e);
+    } finally {
+      this.isLoading = false;
+    }
+  },
+
+  async previousSong() {
+    if (this.isLoading) return;
+    try {
       this.isLoading = true;
+      const res = await axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true });
+      const data = res.data;
+
+      this.songName = data.songName;
+      this.songUrl = data.url;
+      this.fileName = data.fileName;
+      this.globalLikeCount = data.likeCount || 0;
+      this.globalDislikeCount = data.dislikeCount || 0;
+      this.waveformUrl = data.waveformUrl || '';
+
+      let peaks = undefined;
+      if (this.waveformUrl) {
+        try {
+          const r = await fetch(this.waveformUrl);
+          const json = await r.json();
+          if (Array.isArray(json) && json.length > 0) peaks = json;
+        } catch (e) {
+          console.warn('Impossible de charger le JSON waveform:', e);
+        }
+      }
+
       this.isSongReady = false;
       this.isPlaying = false;
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
 
-      try {
-        const res = await axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true });
-        const data = res.data;
+      // ✅ Utiliser la même méthode
+      this.attachReadyListener();
+      this.wavesurfer.load(this.songUrl, peaks);
 
-        this.songName = data.songName;
-        this.songUrl = data.url;
-        this.fileName = data.fileName;
-        this.globalLikeCount = data.likeCount || 0;
-        this.globalDislikeCount = data.dislikeCount || 0;
-        this.waveformUrl = data.waveformUrl || '';
-
-        let peaks = undefined;
-
-        // ✅ Charger JSON waveform correctement
-        if (this.waveformUrl) {
-          try {
-            const r = await fetch(this.waveformUrl);
-            const json = await r.json();
-            if (Array.isArray(json) && json.length > 0) peaks = json;
-          } catch (e) {
-            console.warn('Impossible de charger le JSON waveform:', e);
-          }
-        }
-
-        this.wavesurfer.un('ready');
-        this.isSongReady = false;
-        this.wavesurfer.load(this.songUrl, peaks);
-
-      } catch (e) {
-        console.error('Erreur fetchSong:', e);
-      } finally {
-        this.isLoading = false;
-      }
-    },
+    } catch (e) {
+      console.error('Erreur previousSong:', e);
+    } finally {
+      this.isLoading = false;
+    }
+  },
     playAudio() {
       if (!this.isSongReady) return;
       this.wavesurfer.play();
