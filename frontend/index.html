@@ -137,7 +137,8 @@ createApp({
             console.log('✅ READY - Audio prêt à jouer');
             this.isSongReady = true;
             this.duration = this.formatTime(this.wavesurfer.getDuration());
-            this.playAudio();
+            this.isLoading = false;
+            // ❌ NE PAS appeler playAudio() automatiquement !
           });
 
           // ✅ Charger l'audio
@@ -188,7 +189,8 @@ createApp({
             console.log('✅ READY - Audio prêt à jouer');
             this.isSongReady = true;
             this.duration = this.formatTime(this.wavesurfer.getDuration());
-            this.playAudio();
+            this.isLoading = false;
+            // ❌ NE PAS appeler playAudio() automatiquement !
           });
 
           // ✅ Charger l'audio
@@ -204,7 +206,6 @@ createApp({
       if (!this.isSongReady) return;
       this.wavesurfer.play();
       this.isPlaying = true;
-      this.isLoading = false;
     },
 
     pauseAudio() {
