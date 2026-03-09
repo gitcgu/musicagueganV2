@@ -12,7 +12,6 @@
   .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
   .mode-switch { position: absolute; top: 20px; right: 20px; }
   
-  /* ✅ CONTAINER POUR LA RÉVÉLATION */
   .waveform-wrapper {
     position: relative;
     width: 100%;
@@ -24,7 +23,6 @@
     overflow: hidden;
   }
   
-  /* ✅ IMAGE DE FOND (RÉVELÉE PROGRESSIVEMENT DE GAUCHE À DROITE) */
   .album-image {
     position: absolute;
     top: 0;
@@ -37,7 +35,6 @@
     transition: clip-path 0.1s linear;
   }
   
-  /* ✅ WAVEFORM GRISÉ + SEMI-TRANSPARENT */
   #waveform { 
     position: relative;
     width: 100%; 
@@ -60,9 +57,7 @@
 
     <h1>{{ songName }}</h1>
     
-    <!-- ✅ RÉVÉLATION IMAGE + WAVEFORM -->
     <div class="waveform-wrapper">
-      <!-- ✅ IMAGE qui se révèle de gauche à droite -->
       <div 
         class="album-image" 
         :style="{ 
@@ -70,8 +65,6 @@
           clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
         }"
       ></div>
-      
-      <!-- ✅ WAVEFORM GRISÉ par-dessus -->
       <div id="waveform"></div>
     </div>
     
@@ -121,26 +114,23 @@ createApp({
       bgColor: '#000',
       textColor: '#fff',
       userInteracted: false,
-      progressPercent: 0,  // ✅ 0 au départ (caché), 100 à la fin (visible)
+      progressPercent: 0,
     };
   },
   mounted() {
-    // ✅ WAVEFORM GRISÉ + PROGRESSCOLOR TRANSPARENT
     this.wavesurfer = WaveSurfer.create({
       container: '#waveform',
-      waveColor: '#666666',  // ✅ Gris au lieu de violet
-      progressColor: 'rgba(255, 100, 100, 0.3)',  // ✅ Rouge transparent
+      waveColor: '#666666',
+      progressColor: 'rgba(255, 100, 100, 0.3)',
       barWidth: 2,
       height: 250,
       responsive: true,
     });
 
-    // ✅ Mettre à jour la révélation de l'image
     this.wavesurfer.on('audioprocess', () => {
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
         
-        // ✅ INVERSÉ : au départ 0%, à la fin 100%
         const duration = this.wavesurfer.getDuration();
         const currentTime = this.wavesurfer.getCurrentTime();
         if (duration > 0) {
@@ -152,11 +142,10 @@ createApp({
     this.wavesurfer.on('finish', () => {
       this.isPlaying = false;
       this.currentTime = this.duration;
-      this.progressPercent = 100;  // ✅ Image complètement visible
+      this.progressPercent = 100;
       this.nextSong();
     });
 
-    // ✅ Premier clic
     document.addEventListener('click', this.unlockAutoPlay);
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
@@ -198,7 +187,7 @@ createApp({
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
-      this.progressPercent = 0;  // ✅ Reset au départ
+      this.progressPercent = 0;
 
       axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -252,7 +241,7 @@ createApp({
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
-      this.progressPercent = 0;  // ✅ Reset au départ
+      this.progressPercent = 0;
 
       axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -313,7 +302,7 @@ createApp({
     async replaySong() {
       if (!this.isSongReady) return;
       this.wavesurfer.seekTo(0);
-      this.progressPercent = 0;  // ✅ Reset au départ
+      this.progressPercent = 0;
       await this.playAudio();
     },
 
