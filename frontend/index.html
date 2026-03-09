@@ -65,10 +65,10 @@ createApp({
       globalDislikeCount: 0,
       bgColor: '#000',
       textColor: '#fff',
+      userInteracted: false,
     };
   },
   mounted() {
-    // ✅ Configuration WaveSurfer
     this.wavesurfer = WaveSurfer.create({
       container: '#waveform',
       waveColor: '#b264b2',
@@ -78,25 +78,54 @@ createApp({
       responsive: true,
     });
 
-    // ✅ Listener permanent pour audioprocess
     this.wavesurfer.on('audioprocess', () => {
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
       }
     });
 
-    // ✅ Listener permanent pour finish
     this.wavesurfer.on('finish', () => {
       this.isPlaying = false;
       this.currentTime = this.duration;
       this.nextSong();
     });
 
-    // ✅ Charger la première chanson
+    // ✅ Écouter le PREMIER clic/interaction ANYWHERE
+    document.addEventListener('click', this.unlockAutoPlay);
+    document.addEventListener('touchstart', this.unlockAutoPlay);
+
     this.loadNextSong();
   },
 
   methods: {
+    // ✅ Au premier clic, déverrouiller l'autoplay
+    unlockAutoPlay() {
+      if (!this.userInteracted) {
+        console.log('✅ Autoplay déverrouillé');
+        this.userInteracted = true;
+        
+        // Retirer les listeners
+        document.removeEventListener('click', this.unlockAutoPlay);
+        document.removeEventListener('touchstart', this.unlockAutoPlay);
+
+        // Si la musique est prête, la lancer
+        if (this.isSongReady) {
+          this.playAudio();
+        }
+      }
+    },
+
+    async playAudio() {
+      if (!this.isSongReady) return;
+      try {
+        await this.wavesurfer.play();
+        this.isPlaying = true;
+        console.log('🎵 Lecture en cours...');
+      } catch (e) {
+        console.error('❌ Erreur playAudio():', e);
+      }
+    },
+
     loadNextSong() {
       this.isLoading = true;
       this.isSongReady = false;
@@ -118,7 +147,6 @@ createApp({
 
           let peaks = undefined;
 
-          // ✅ Charger les peaks
           if (this.waveformUrl) {
             try {
               const r = await fetch(this.waveformUrl);
@@ -129,19 +157,20 @@ createApp({
             }
           }
 
-          // ✅ Nettoyer les anciens listeners
           this.wavesurfer.un('ready');
 
-          // ✅ Ajouter le listener AVANT load
           this.wavesurfer.once('ready', () => {
             console.log('✅ READY - Audio prêt à jouer');
             this.isSongReady = true;
             this.duration = this.formatTime(this.wavesurfer.getDuration());
             this.isLoading = false;
-            // ❌ NE PAS appeler playAudio() automatiquement !
+
+            // ✅ Si utilisateur a interagi, LANCER AUTO !
+            if (this.userInteracted) {
+              setTimeout(() => this.playAudio(), 100);
+            }
           });
 
-          // ✅ Charger l'audio
           this.wavesurfer.load(this.songUrl, peaks);
         })
         .catch((e) => {
@@ -181,31 +210,26 @@ createApp({
             }
           }
 
-          // ✅ Nettoyer les anciens listeners
           this.wavesurfer.un('ready');
 
-          // ✅ Ajouter le listener AVANT load
           this.wavesurfer.once('ready', () => {
             console.log('✅ READY - Audio prêt à jouer');
             this.isSongReady = true;
             this.duration = this.formatTime(this.wavesurfer.getDuration());
             this.isLoading = false;
-            // ❌ NE PAS appeler playAudio() automatiquement !
+
+            // ✅ Si utilisateur a interagi, LANCER AUTO !
+            if (this.userInteracted) {
+              setTimeout(() => this.playAudio(), 100);
+            }
           });
 
-          // ✅ Charger l'audio
           this.wavesurfer.load(this.songUrl, peaks);
         })
         .catch((e) => {
           console.error('❌ Erreur loadPreviousSong:', e);
           this.isLoading = false;
         });
-    },
-
-    playAudio() {
-      if (!this.isSongReady) return;
-      this.wavesurfer.play();
-      this.isPlaying = true;
     },
 
     pauseAudio() {
@@ -219,19 +243,21 @@ createApp({
       else this.playAudio();
     },
 
-    replaySong() {
+    async replaySong() {
       if (!this.isSongReady) return;
       this.wavesurfer.seekTo(0);
-      this.playAudio();
+      await this.playAudio();
     },
 
     nextSong() {
       if (this.isLoading) return;
+      this.userInteracted = true;
       this.loadNextSong();
     },
 
     previousSong() {
       if (this.isLoading) return;
+      this.userInteracted = true;
       this.loadPreviousSong();
     },
 
