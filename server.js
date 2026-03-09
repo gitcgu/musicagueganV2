@@ -58,17 +58,20 @@ async function getSongStats(songName) {
   }
 }
 
-// ✅ SERVIR WAVEFORM JSON (avec mode)
+// ✅ SERVIR WAVEFORM JSON
 app.get('/api/waveform/:fileName', async (req, res) => {
   try {
     const fileName = req.params.fileName;
-    const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';  // ✅ AJOUTER ÇA
-    const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;  // ✅ AJOUTER ÇA
-    
     const jsonFileName = WAVE_FOLDER + fileName.replace('.mp3', '.json');
     
-    const file = storage.bucket(bucketName).file(jsonFileName);  // ✅ UTILISER bucketName
-    const [exists] = await file.exists();
+    // ✅ Essayer d'abord MP3_BUCKET, puis MIX_BUCKET
+    let file = storage.bucket(MP3_BUCKET_NAME).file(jsonFileName);
+    let [exists] = await file.exists();
+    
+    if (!exists) {
+      file = storage.bucket(MIX_BUCKET_NAME).file(jsonFileName);
+      [exists] = await file.exists();
+    }
     
     if (!exists) {
       return res.status(404).json({ error: 'Waveform not found' });
@@ -84,15 +87,19 @@ app.get('/api/waveform/:fileName', async (req, res) => {
   }
 });
 
-// ✅ SERVIR MP3 (avec mode)
+// ✅ SERVIR MP3/MIX
 app.get('/api/audio/:fileName', async (req, res) => {
   try {
     const fileName = req.params.fileName;
-    const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';  // ✅ AJOUTER ÇA
-    const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;  // ✅ AJOUTER ÇA
     
-    const file = storage.bucket(bucketName).file(fileName);  // ✅ UTILISER bucketName
-    const [exists] = await file.exists();
+    // ✅ Essayer d'abord MP3_BUCKET, puis MIX_BUCKET
+    let file = storage.bucket(MP3_BUCKET_NAME).file(fileName);
+    let [exists] = await file.exists();
+    
+    if (!exists) {
+      file = storage.bucket(MIX_BUCKET_NAME).file(fileName);
+      [exists] = await file.exists();
+    }
     
     if (!exists) {
       return res.status(404).json({ error: 'Audio not found' });
