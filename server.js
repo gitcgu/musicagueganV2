@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 8080;
 const MP3_BUCKET_NAME = 'musica-mp3-bucket';
 const MIX_BUCKET_NAME = 'musica-mix-bucket';
 const WAVE_FOLDER = 'waveforms/';
-const POCHETTE_FILENAME = 'pochette.jpg';  // ✅ AJOUTE CETTE LIGNE
+const POCHETTE_FILENAME = 'pochettes/pochette.jpg';  // ✅ AJOUTE CETTE LIGNE
 
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
