@@ -11,7 +11,20 @@
   body { margin: 0; background: #000; color: #fff; font-family: sans-serif; text-align: center; }
   .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
   .mode-switch { position: absolute; top: 20px; right: 20px; }
-  #waveform { width: 100%; max-width: 800px; height: 120px; margin: 20px 0; }
+  
+  .waveform-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: 250px;
+    margin: 20px 0;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  #waveform { width: 100%; height: 100%; }
+  
   .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
@@ -24,7 +37,12 @@
     </div>
 
     <h1>{{ songName }}</h1>
-    <div id="waveform"></div>
+    
+    <!-- ✅ Waveform avec révélation image -->
+    <div class="waveform-wrapper">
+      <div id="waveform"></div>
+    </div>
+    
     <div>{{ currentTime }} / {{ duration }}</div>
 
     <div class="controls">
@@ -53,6 +71,7 @@ createApp({
       songName: 'Chargement...',
       songUrl: '',
       waveformUrl: '',
+      imageUrl: '',
       fileName: '',
       wavesurfer: null,
       isPlaying: false,
@@ -66,6 +85,7 @@ createApp({
       bgColor: '#000',
       textColor: '#fff',
       userInteracted: false,
+      albumImage: null,
     };
   },
   mounted() {
@@ -74,13 +94,14 @@ createApp({
       waveColor: '#b264b2',
       progressColor: '#ff6464',
       barWidth: 2,
-      height: 120,
+      height: 250,
       responsive: true,
     });
 
     this.wavesurfer.on('audioprocess', () => {
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+        this.updateProgressColor();  // ✅ Mettre à jour la révélation
       }
     });
 
@@ -104,14 +125,77 @@ createApp({
         console.log('✅ Autoplay déverrouillé');
         this.userInteracted = true;
         
-        // Retirer les listeners
         document.removeEventListener('click', this.unlockAutoPlay);
         document.removeEventListener('touchstart', this.unlockAutoPlay);
 
-        // Si la musique est prête, la lancer
         if (this.isSongReady) {
           this.playAudio();
         }
+      }
+    },
+
+    // ✅ Révéler l'image progressivement
+    updateProgressColor() {
+      if (!this.albumImage || !this.wavesurfer) return;
+
+      try {
+        const duration = this.wavesurfer.getDuration();
+        if (!duration) return;
+
+        const progress = this.wavesurfer.getCurrentTime() / duration;
+        
+        const canvas = document.createElement('canvas');
+        canvas.width = 900;
+        canvas.height = 250;
+
+        const ctx = canvas.getContext('2d');
+
+        // Fond noir
+        ctx.fillStyle = '#000';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // ✅ Afficher l'image sur la partie "progress"
+        const progressWidth = canvas.width * progress;
+        if (progressWidth > 0) {
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, progressWidth, canvas.height);
+          ctx.clip();
+          
+          // Calculer les dimensions pour que l'image fit bien
+          const imgAspect = this.albumImage.width / this.albumImage.height;
+          const canvasAspect = canvas.width / canvas.height;
+          
+          let drawWidth, drawHeight, drawX, drawY;
+          
+          if (imgAspect > canvasAspect) {
+            drawHeight = canvas.height;
+            drawWidth = drawHeight * imgAspect;
+            drawX = (canvas.width - drawWidth) / 2;
+            drawY = 0;
+          } else {
+            drawWidth = canvas.width;
+            drawHeight = drawWidth / imgAspect;
+            drawX = 0;
+            drawY = (canvas.height - drawHeight) / 2;
+          }
+          
+          ctx.drawImage(this.albumImage, drawX, drawY, drawWidth, drawHeight);
+          ctx.restore();
+        }
+
+        // ✅ Dégradé de violet à transparent pour l'effet smooth
+        const gradient = ctx.createLinearGradient(progressWidth - 50, 0, progressWidth, 0);
+        gradient.addColorStop(0, 'rgba(255, 100, 100, 0.8)');
+        gradient.addColorStop(1, 'rgba(178, 100, 178, 0)');
+        
+        ctx.fillStyle = gradient;
+        ctx.fillRect(Math.max(0, progressWidth - 100), 0, 100, canvas.height);
+
+        // Mettre à jour le progressColor
+        this.wavesurfer.setProgressColor(canvas.toDataURL());
+      } catch (e) {
+        console.error('Erreur updateProgressColor:', e);
       }
     },
 
@@ -133,6 +217,7 @@ createApp({
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
+      this.albumImage = null;
 
       axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -144,6 +229,7 @@ createApp({
           this.globalLikeCount = data.likeCount || 0;
           this.globalDislikeCount = data.dislikeCount || 0;
           this.waveformUrl = data.waveformUrl || '';
+          this.imageUrl = data.imageUrl || '';
 
           let peaks = undefined;
 
@@ -157,6 +243,17 @@ createApp({
             }
           }
 
+          // ✅ Charger l'image de la pochette
+          if (this.imageUrl) {
+            const img = new Image();
+            img.onload = () => {
+              this.albumImage = img;
+              console.log('✅ Image pochette chargée');
+            };
+            img.onerror = () => console.warn('❌ Impossible de charger l\'image');
+            img.src = this.imageUrl;
+          }
+
           this.wavesurfer.un('ready');
 
           this.wavesurfer.once('ready', () => {
@@ -165,7 +262,6 @@ createApp({
             this.duration = this.formatTime(this.wavesurfer.getDuration());
             this.isLoading = false;
 
-            // ✅ Si utilisateur a interagi, LANCER AUTO !
             if (this.userInteracted) {
               setTimeout(() => this.playAudio(), 100);
             }
@@ -186,6 +282,7 @@ createApp({
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
+      this.albumImage = null;
 
       axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -197,6 +294,7 @@ createApp({
           this.globalLikeCount = data.likeCount || 0;
           this.globalDislikeCount = data.dislikeCount || 0;
           this.waveformUrl = data.waveformUrl || '';
+          this.imageUrl = data.imageUrl || '';
 
           let peaks = undefined;
 
@@ -210,6 +308,17 @@ createApp({
             }
           }
 
+          // ✅ Charger l'image de la pochette
+          if (this.imageUrl) {
+            const img = new Image();
+            img.onload = () => {
+              this.albumImage = img;
+              console.log('✅ Image pochette chargée');
+            };
+            img.onerror = () => console.warn('❌ Impossible de charger l\'image');
+            img.src = this.imageUrl;
+          }
+
           this.wavesurfer.un('ready');
 
           this.wavesurfer.once('ready', () => {
@@ -218,7 +327,6 @@ createApp({
             this.duration = this.formatTime(this.wavesurfer.getDuration());
             this.isLoading = false;
 
-            // ✅ Si utilisateur a interagi, LANCER AUTO !
             if (this.userInteracted) {
               setTimeout(() => this.playAudio(), 100);
             }
