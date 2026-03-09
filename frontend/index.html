@@ -24,7 +24,7 @@
     overflow: hidden;
   }
   
-  /* ✅ IMAGE DE FOND (RÉVELÉE PROGRESSIVEMENT) */
+  /* ✅ IMAGE DE FOND (RÉVELÉE PROGRESSIVEMENT DE GAUCHE À DROITE) */
   .album-image {
     position: absolute;
     top: 0;
@@ -34,16 +34,17 @@
     background-size: cover;
     background-position: center;
     z-index: 1;
-    clip-path: inset(0 100% 0 0);
     transition: clip-path 0.1s linear;
   }
   
-  /* ✅ WAVEFORM PAR-DESSUS */
+  /* ✅ WAVEFORM GRISÉ + SEMI-TRANSPARENT */
   #waveform { 
     position: relative;
     width: 100%; 
     height: 100%;
     z-index: 2;
+    opacity: 0.5;
+    filter: grayscale(100%);
   }
   
   .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
@@ -64,10 +65,13 @@
       <!-- ✅ IMAGE qui se révèle de gauche à droite -->
       <div 
         class="album-image" 
-        :style="{ backgroundImage: `url('${imageUrl}')`, clipPath: `inset(0 ${100 - progressPercent}% 0 0)` }"
+        :style="{ 
+          backgroundImage: `url('${imageUrl}')`,
+          clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
+        }"
       ></div>
       
-      <!-- ✅ WAVEFORM par-dessus -->
+      <!-- ✅ WAVEFORM GRISÉ par-dessus -->
       <div id="waveform"></div>
     </div>
     
@@ -117,14 +121,15 @@ createApp({
       bgColor: '#000',
       textColor: '#fff',
       userInteracted: false,
-      progressPercent: 100,  // ✅ Pourcentage de révélation (0 = complètement montré, 100 = caché)
+      progressPercent: 0,  // ✅ 0 au départ (caché), 100 à la fin (visible)
     };
   },
   mounted() {
+    // ✅ WAVEFORM GRISÉ + PROGRESSCOLOR TRANSPARENT
     this.wavesurfer = WaveSurfer.create({
       container: '#waveform',
-      waveColor: '#b264b2',
-      progressColor: '#ff6464',
+      waveColor: '#666666',  // ✅ Gris au lieu de violet
+      progressColor: 'rgba(255, 100, 100, 0.3)',  // ✅ Rouge transparent
       barWidth: 2,
       height: 250,
       responsive: true,
@@ -135,11 +140,11 @@ createApp({
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
         
-        // ✅ Calculer le pourcentage de progression
+        // ✅ INVERSÉ : au départ 0%, à la fin 100%
         const duration = this.wavesurfer.getDuration();
         const currentTime = this.wavesurfer.getCurrentTime();
         if (duration > 0) {
-          this.progressPercent = Math.max(0, 100 - (currentTime / duration) * 100);
+          this.progressPercent = (currentTime / duration) * 100;
         }
       }
     });
@@ -147,7 +152,7 @@ createApp({
     this.wavesurfer.on('finish', () => {
       this.isPlaying = false;
       this.currentTime = this.duration;
-      this.progressPercent = 0;  // Image complètement révélée
+      this.progressPercent = 100;  // ✅ Image complètement visible
       this.nextSong();
     });
 
@@ -193,7 +198,7 @@ createApp({
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
-      this.progressPercent = 100;  // ✅ Reset à caché
+      this.progressPercent = 0;  // ✅ Reset au départ
 
       axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -247,7 +252,7 @@ createApp({
       this.currentTime = '0:00';
       this.duration = '0:00';
       this.hasVoted = false;
-      this.progressPercent = 100;  // ✅ Reset à caché
+      this.progressPercent = 0;  // ✅ Reset au départ
 
       axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -308,7 +313,7 @@ createApp({
     async replaySong() {
       if (!this.isSongReady) return;
       this.wavesurfer.seekTo(0);
-      this.progressPercent = 100;
+      this.progressPercent = 0;  // ✅ Reset au départ
       await this.playAudio();
     },
 
