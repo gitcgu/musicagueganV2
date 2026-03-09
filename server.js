@@ -79,17 +79,10 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     const [exists] = await file.exists();
     if (!exists) return res.status(404).json({ error: 'Fichier non trouvé' });
     
-    //const [content] = await file.download();
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(content);
-    const stream = file.createReadStream();
-    stream.on('error', err => {
-      console.error('Stream error:', err);
-      res.status(500).end();
-      });
-    stream.pipe(res);
-  } catch (e) {
+    const [content] = await file.download();
+res.setHeader('Content-Type', contentType);
+res.setHeader('Access-Control-Allow-Origin', '*');
+res.send(content);  } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
