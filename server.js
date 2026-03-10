@@ -61,38 +61,37 @@ async function getSongStats(songName) {
 // ✅ SERVIR LES FICHIERS AUDIO ET WAVEFORM SANS CORS
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
-    let { type, bucketType, fileName } = req.params;
-    // Buckets: mix ou mp3
-    let bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+    const { type, bucketType, fileName } = req.params;
+    const primaryBucket = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+    const secondaryBucket = bucketType === 'mix' ? MP3_BUCKET_NAME : MIX_BUCKET_NAME;
+    const targetName = decodeURIComponent(fileName);
 
-    // Décoder le nom de fichier
     let file;
     let contentType;
 
     if (type === 'audio') {
-      file = storage.bucket(bucketName).file(decodeURIComponent(fileName));
+      file = storage.bucket(primaryBucket).file(targetName);
       contentType = 'audio/mpeg';
     } else if (type === 'waveform') {
-      file = storage.bucket(bucketName).file(WAVE_FOLDER + decodeURIComponent(fileName).replace('.mp3', '.json'));
+      file = storage.bucket(primaryBucket).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
       contentType = 'application/json';
     } else {
       return res.status(400).json({ error: 'Type invalide' });
     }
 
-    // Vérifier l'existence dans le bucket choisi
+    // Essayez dans le bucket primaire
     let [exists] = await file.exists();
 
-    // Si pas trouvé, essayer l'autre bucket
+    // Si pas trouvé, essayez le bucket secondaire
     if (!exists) {
-      const otherBucketName = bucketName === MIX_BUCKET_NAME ? MP3_BUCKET_NAME : MIX_BUCKET_NAME;
-      bucketName = otherBucketName;
-      if (type === 'audio') file = storage.bucket(bucketName).file(decodeURIComponent(fileName));
-      else file = storage.bucket(bucketName).file(WAVE_FOLDER + decodeURIComponent(fileName).replace('.mp3', '.json'));
+      if (type === 'audio') file = storage.bucket(secondaryBucket).file(targetName);
+      else file = storage.bucket(secondaryBucket).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
 
       [exists] = await file.exists();
     }
 
     if (!exists) {
+      // Fichier absent dans les deux buckets
       return res.status(404).json({ error: 'Fichier non trouvé' });
     }
 
@@ -105,6 +104,7 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 app.get('/api/next-song', async (req, res) => {
   try {
