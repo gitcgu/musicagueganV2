@@ -61,11 +61,14 @@ async function getSongStats(songName) {
 // ✅ SERVIR LES FICHIERS AUDIO ET WAVEFORM SANS CORS
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
-    const { type, bucketType, fileName } = req.params;
-    const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-    
-    let file, contentType;
-    
+    let { type, bucketType, fileName } = req.params;
+    // Buckets: mix ou mp3
+    let bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+
+    // Décoder le nom de fichier
+    let file;
+    let contentType;
+
     if (type === 'audio') {
       file = storage.bucket(bucketName).file(decodeURIComponent(fileName));
       contentType = 'audio/mpeg';
@@ -75,14 +78,29 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     } else {
       return res.status(400).json({ error: 'Type invalide' });
     }
-    
-    const [exists] = await file.exists();
-    if (!exists) return res.status(404).json({ error: 'Fichier non trouvé' });
-    
+
+    // Vérifier l'existence dans le bucket choisi
+    let [exists] = await file.exists();
+
+    // Si pas trouvé, essayer l'autre bucket
+    if (!exists) {
+      const otherBucketName = bucketName === MIX_BUCKET_NAME ? MP3_BUCKET_NAME : MIX_BUCKET_NAME;
+      bucketName = otherBucketName;
+      if (type === 'audio') file = storage.bucket(bucketName).file(decodeURIComponent(fileName));
+      else file = storage.bucket(bucketName).file(WAVE_FOLDER + decodeURIComponent(fileName).replace('.mp3', '.json'));
+
+      [exists] = await file.exists();
+    }
+
+    if (!exists) {
+      return res.status(404).json({ error: 'Fichier non trouvé' });
+    }
+
     const [content] = await file.download();
-res.setHeader('Content-Type', contentType);
-res.setHeader('Access-Control-Allow-Origin', '*');
-res.send(content);  } catch (e) {
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(content);
+  } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
