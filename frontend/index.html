@@ -338,11 +338,18 @@ loadPreviousSong() {
       this.isPlaying = false;
     },
 
-    togglePlay() {
-      if (!this.isSongReady) return;
-      if (this.isPlaying) this.pauseAudio();
-      else this.playAudio();
-    },
+    toggleMode() {
+  if (this.isLoading) return;
+
+  // On change le mode
+  this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
+
+  // Si on revient sur mp3, on charge la prochaine chanson
+  if (this.mode === 'mp3') {
+    this.loadNextSong();
+  }
+  // Si on passe en mix, on ne fait rien : attente que l'utilisateur sélectionne un mix
+}
 
     async replaySong() {
       if (!this.isSongReady) return;
@@ -397,14 +404,40 @@ loadPreviousSong() {
         });
     },
 
+async playMix(mix) {
+  if (this.isLoading) return;
 
-    async playMix(mix) {
+  // Si on clique sur le mix déjà en cours
   if (this.currentMix === mix.fileName && this.isPlaying) {
-    // Si on clique sur le mix déjà en cours, on met en pause
     this.wavesurfer.pause();
     this.isPlaying = false;
     return;
   }
+
+  this.isLoading = true;
+  this.isSongReady = false;
+  this.isPlaying = false;
+  this.progressPercent = 0;
+  this.currentMix = mix.fileName;
+
+  // Pour les mix, on n'affiche pas de titre ni de pochette
+  this.songName = '';
+  this.imageUrl = '';
+
+  // On supprime tout ancien listener
+  this.wavesurfer.un('ready');
+
+  // Quand le mix est prêt
+  this.wavesurfer.once('ready', () => {
+    console.log('✅ Mix prêt à jouer');
+    this.isSongReady = true;
+    this.isLoading = false;
+    this.playAudio();
+  });
+
+  // On charge le mix dans wavesurfer
+  this.wavesurfer.load(mix.url);
+}
 
   // On charge le nouveau mix
   this.isLoading = true;
