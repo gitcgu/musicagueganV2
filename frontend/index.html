@@ -57,7 +57,7 @@
 
     <h1>{{ songName }}</h1>
     
-    <div class="waveform-wrapper">
+    <div v-if="mode === 'mp3'" class="waveform-wrapper">
       <div 
         class="album-image" 
         :style="{ 
@@ -65,12 +65,25 @@
           clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
         }"
       ></div>
+      <div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
+
+  <div v-for="mix in mixList" :key="mix.fileName"
+       style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;">
+
+    <div>{{ mix.name }}</div>
+
+    <button @click="playMix(mix)">
+      {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
+    </button>
+
+    </div>
+  </div>
       <div id="waveform"></div>
     </div>
     
-    <div>{{ currentTime }} / {{ duration }}</div>
-
-    <div class="controls">
+      <div v-if="mode === 'mp3'">{{ currentTime }} / {{ duration }}</div>
+    
+    <div v-if="mode === 'mp3'" class="controls">
       <button @click="previousSong" :disabled="isLoading">⏮</button>
       <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
       <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
