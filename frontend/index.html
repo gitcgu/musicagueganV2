@@ -207,114 +207,132 @@ currentMix: null, // le mix en cours
       }
     },
 
-    loadNextSong() {
-      this.isLoading = true;
-      this.isSongReady = false;
-      this.isPlaying = false;
-      this.currentTime = '0:00';
-      this.duration = '0:00';
-      this.hasVoted = false;
-      this.progressPercent = 0;
+loadNextSong() {
+  if (this.isLoading) return;
 
-      axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
-        .then(async (res) => {
-          const data = res.data;
+  this.isLoading = true;
+  this.isSongReady = false;
+  this.isPlaying = false;
+  this.currentTime = '0:00';
+  this.duration = '0:00';
+  this.hasVoted = false;
+  this.progressPercent = 0;
+  this.imageUrl = ''; // ✅ Réinitialiser l'image
 
-          this.songName = data.songName;
-          this.songUrl = data.url;
-          this.fileName = data.fileName;
-          this.globalLikeCount = data.likeCount || 0;
-          this.globalDislikeCount = data.dislikeCount || 0;
-          this.waveformUrl = data.waveformUrl || '';
-          this.imageUrl = data.imageUrl || '';
+  axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
+    .then(async (res) => {
+      const data = res.data;
 
-          let peaks = undefined;
+      // ✅ Titre uniquement pour les MP3
+      this.songName = this.mode === 'mp3' ? data.songName : '';
 
-          if (this.waveformUrl) {
-            try {
-              const r = await fetch(this.waveformUrl);
-              const json = await r.json();
-              if (Array.isArray(json) && json.length > 0) peaks = json;
-            } catch (e) {
-              console.warn('Impossible de charger le JSON waveform:', e);
-            }
-          }
+      this.songUrl = data.url;
+      this.fileName = data.fileName;
+      this.globalLikeCount = data.likeCount || 0;
+      this.globalDislikeCount = data.dislikeCount || 0;
+      this.waveformUrl = data.waveformUrl || '';
 
-          this.wavesurfer.un('ready');
+      // ✅ Charger l'image uniquement pour les MP3
+      if (this.mode === 'mp3') {
+        this.imageUrl = data.imageUrl || '';
+      } else {
+        this.imageUrl = ''; // Pas d'image pour les mix
+      }
 
-          this.wavesurfer.once('ready', () => {
-            console.log('✅ READY - Audio prêt à jouer');
-            this.isSongReady = true;
-            this.duration = this.formatTime(this.wavesurfer.getDuration());
-            this.isLoading = false;
+      let peaks = undefined;
 
-            if (this.userInteracted) {
-              setTimeout(() => this.playAudio(), 100);
-            }
-          });
+      if (this.waveformUrl) {
+        try {
+          const r = await fetch(this.waveformUrl);
+          const json = await r.json();
+          if (Array.isArray(json) && json.length > 0) peaks = json;
+        } catch (e) {
+          console.warn('Impossible de charger le JSON waveform:', e);
+        }
+      }
 
-          this.wavesurfer.load(this.songUrl, peaks);
-        })
-        .catch((e) => {
-          console.error('❌ Erreur loadNextSong:', e);
-          this.isLoading = false;
-        });
-    },
+      this.wavesurfer.un('ready');
 
-    loadPreviousSong() {
-      this.isLoading = true;
-      this.isSongReady = false;
-      this.isPlaying = false;
-      this.currentTime = '0:00';
-      this.duration = '0:00';
-      this.hasVoted = false;
-      this.progressPercent = 0;
+      this.wavesurfer.once('ready', () => {
+        this.isSongReady = true;
+        this.duration = this.formatTime(this.wavesurfer.getDuration());
+        this.isLoading = false;
 
-      axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
-        .then(async (res) => {
-          const data = res.data;
+        if (this.userInteracted) {
+          setTimeout(() => this.playAudio(), 100);
+        }
+      });
 
-          this.songName = data.songName;
-          this.songUrl = data.url;
-          this.fileName = data.fileName;
-          this.globalLikeCount = data.likeCount || 0;
-          this.globalDislikeCount = data.dislikeCount || 0;
-          this.waveformUrl = data.waveformUrl || '';
-          this.imageUrl = data.imageUrl || '';
+      this.wavesurfer.load(this.songUrl, peaks);
 
-          let peaks = undefined;
+    })
+    .catch((e) => {
+      console.error('❌ Erreur loadNextSong:', e);
+      this.isLoading = false;
+    });
+},
+loadPreviousSong() {
+  if (this.isLoading) return;
 
-          if (this.waveformUrl) {
-            try {
-              const r = await fetch(this.waveformUrl);
-              const json = await r.json();
-              if (Array.isArray(json) && json.length > 0) peaks = json;
-            } catch (e) {
-              console.warn('Impossible de charger le JSON waveform:', e);
-            }
-          }
+  this.isLoading = true;
+  this.isSongReady = false;
+  this.isPlaying = false;
+  this.currentTime = '0:00';
+  this.duration = '0:00';
+  this.hasVoted = false;
+  this.progressPercent = 0;
+  this.imageUrl = ''; // ✅ Réinitialiser l'image au début
 
-          this.wavesurfer.un('ready');
+  axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
+    .then(async (res) => {
+      const data = res.data;
 
-          this.wavesurfer.once('ready', () => {
-            console.log('✅ READY - Audio prêt à jouer');
-            this.isSongReady = true;
-            this.duration = this.formatTime(this.wavesurfer.getDuration());
-            this.isLoading = false;
+      this.songName = this.mode === 'mp3' ? data.songName : ''; // Pas de titre pour mix
+      this.songUrl = data.url;
+      this.fileName = data.fileName;
+      this.globalLikeCount = data.likeCount || 0;
+      this.globalDislikeCount = data.dislikeCount || 0;
+      this.waveformUrl = data.waveformUrl || '';
+      
+      // ✅ Charger l'image uniquement pour les MP3
+      if (this.mode === 'mp3') {
+        this.imageUrl = data.imageUrl || '';
+      } else {
+        this.imageUrl = ''; // Aucun fond pour les mix
+      }
 
-            if (this.userInteracted) {
-              setTimeout(() => this.playAudio(), 100);
-            }
-          });
+      let peaks = undefined;
 
-          this.wavesurfer.load(this.songUrl, peaks);
-        })
-        .catch((e) => {
-          console.error('❌ Erreur loadPreviousSong:', e);
-          this.isLoading = false;
-        });
-    },
+      if (this.waveformUrl) {
+        try {
+          const r = await fetch(this.waveformUrl);
+          const json = await r.json();
+          if (Array.isArray(json) && json.length > 0) peaks = json;
+        } catch (e) {
+          console.warn('Impossible de charger le JSON waveform:', e);
+        }
+      }
 
+      this.wavesurfer.un('ready');
+
+      this.wavesurfer.once('ready', () => {
+        this.isSongReady = true;
+        this.duration = this.formatTime(this.wavesurfer.getDuration());
+        this.isLoading = false;
+
+        if (this.userInteracted) {
+          setTimeout(() => this.playAudio(), 100);
+        }
+      });
+
+      this.wavesurfer.load(this.songUrl, peaks);
+
+    })
+    .catch((e) => {
+      console.error('❌ Erreur loadPreviousSong:', e);
+      this.isLoading = false;
+    });
+},
     pauseAudio() {
       this.wavesurfer.pause();
       this.isPlaying = false;
