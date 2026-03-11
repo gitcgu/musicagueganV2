@@ -56,34 +56,33 @@
     </div>
 
     <h1>{{ songName }}</h1>
-    
-    <div v-if="mode === 'mp3'" class="waveform-wrapper">
-      <div 
-        class="album-image" 
-        :style="{ 
-          backgroundImage: `url('${imageUrl}')`,
-          clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
-        }"
-      ></div>
-      <div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
 
-  <div v-for="mix in mixList" :key="mix.fileName"
-       style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;">
+    <!-- Bloc MP3 -->
+<div v-if="mode === 'mp3'" class="waveform-wrapper">
+  <div class="album-image" ...></div>
+  <div id="waveform"></div>
+  <div>{{ currentTime }} / {{ duration }}</div>
+  <div class="controls">
+          <button @click="previousSong" :disabled="isLoading">⏮</button>
+      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
+      <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
+      <button @click="nextSong" :disabled="isLoading">⏭</button>
 
+  </div>
+</div>
+
+<!-- Bloc Mix -->
+<div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
+  <div v-for="mix in mixList" :key="mix.fileName" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;">
     <div>{{ mix.name }}</div>
-
     <button @click="playMix(mix)">
       {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
     </button>
-
-    </div>
   </div>
-      <div id="waveform"></div>
-    </div>
+</div> 
+
     
-      <div v-if="mode === 'mp3'">{{ currentTime }} / {{ duration }}</div>
-    
-    <div v-if="mode === 'mp3'" class="controls">
+    <div  class="controls">
       <button @click="previousSong" :disabled="isLoading">⏮</button>
       <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
       <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
@@ -128,6 +127,8 @@ createApp({
       textColor: '#fff',
       userInteracted: false,
       progressPercent: 0,
+      mixList: [],      // la liste des mixes depuis /api/mix-list
+currentMix: null, // le mix en cours
     };
   },
   mounted() {
@@ -165,6 +166,14 @@ createApp({
     document.addEventListener('keydown', this.unlockAutoPlay);
 
     this.loadNextSong();
+
+     // 🔹 Charger la liste des mixes
+  axios.get('/api/mix-list', { withCredentials: true })
+    .then(res => {
+      this.mixList = res.data;
+    })
+    .catch(err => console.error('Erreur /api/mix-list:', err));
+  
   },
 
   methods: {
@@ -366,6 +375,32 @@ createApp({
         });
     },
 
+
+    async playMix(mix) {
+  if (this.currentMix === mix.fileName && this.isPlaying) {
+    // Si on clique sur le mix déjà en cours, on met en pause
+    this.wavesurfer.pause();
+    this.isPlaying = false;
+    return;
+  }
+
+  // On charge le nouveau mix
+  this.isLoading = true;
+  this.currentMix = mix.fileName;
+  this.isSongReady = false;
+  this.progressPercent = 0;
+
+  this.wavesurfer.un('ready');
+  this.wavesurfer.once('ready', () => {
+    this.isSongReady = true;
+    this.isLoading = false;
+    this.playAudio(); // utilise la fonction existante pour lancer la lecture
+  });
+
+  // Charge le mix dans WaveSurfer
+  this.wavesurfer.load(mix.url); // mix.url vient de ton API /api/mix-list
+},
+    
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
       const m = Math.floor(sec / 60);
