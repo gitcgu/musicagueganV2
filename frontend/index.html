@@ -55,12 +55,17 @@
       <button @click="toggleMode" :disabled="isLoading">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
     </div>
 
-    <h1>{{ songName }}</h1>
+<h1>{{ songName }}</h1>
 
-    <!-- Bloc MP3 -->
 <div v-if="mode === 'mp3'" class="waveform-wrapper">
-  <div class="album-image" ...></div>
-  <div id="waveform"></div>
+  <div 
+    class="album-image" 
+    :style="{ 
+      backgroundImage: `url('${imageUrl}')`,
+      clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
+    }"
+  ></div>
+    <div id="waveform"></div>
   <div>{{ currentTime }} / {{ duration }}</div>
   <div class="controls">
           <button @click="previousSong" :disabled="isLoading">⏮</button>
