@@ -79,32 +79,28 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
       return res.status(400).json({ error: 'Type invalide' });
     }
 
-    // Essayez dans le bucket primaire
     let [exists] = await file.exists();
 
-    // Si pas trouvé, essayez le bucket secondaire
     if (!exists) {
       if (type === 'audio') file = storage.bucket(secondaryBucket).file(targetName);
       else file = storage.bucket(secondaryBucket).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
-
       [exists] = await file.exists();
     }
 
     if (!exists) {
-      // Fichier absent dans les deux buckets
       return res.status(404).json({ error: 'Fichier non trouvé' });
     }
 
-    const [content] = await file.download();
+    // ✅ Streaming du fichier audio
     res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(content);
+    file.createReadStream().pipe(res);
+
   } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
-
 
 // ✅ SERVIR LA POCHETTE CORRESPONDANTE À UN MP3
 app.get('/api/pochette/:fileName', async (req, res) => {
