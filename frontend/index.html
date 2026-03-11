@@ -349,7 +349,7 @@ loadPreviousSong() {
     this.loadNextSong();
   }
   // Si on passe en mix, on ne fait rien : attente que l'utilisateur sélectionne un mix
-}
+},
 
     async replaySong() {
       if (!this.isSongReady) return;
@@ -370,12 +370,7 @@ loadPreviousSong() {
       this.loadPreviousSong();
     },
 
-    toggleMode() {
-      if (this.isLoading) return;
-      this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
-      this.loadNextSong();
-    },
-
+  
     likeSong() {
       if (this.hasVoted) return;
       this.hasVoted = true;
