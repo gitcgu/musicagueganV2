@@ -106,6 +106,40 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
 });
 
 
+// ✅ SERVIR LA POCHETTE CORRESPONDANTE À UN MP3
+app.get('/api/pochette/:fileName', async (req, res) => {
+  try {
+    const { fileName } = req.params; // ex: "Ma Chanson.mp3"
+    const cleanName = decodeURIComponent(fileName);
+    const baseName = cleanName.replace(/\.mp3$/i, ''); // "Ma Chanson"
+
+    const bucket = storage.bucket(MP3_BUCKET_NAME);
+
+    // 1. On cherche la pochette spécifique
+    const specificPath = `pochettes/${baseName}.jpg`;
+    let file = bucket.file(specificPath);
+    let [exists] = await file.exists();
+
+    // 2. Si elle n'existe pas, on tombe sur la pochette par défaut
+    if (!exists) {
+      file = bucket.file(POCHETTE_FILENAME); // "pochettes/pochette.jpg"
+      ;[exists] = await file.exists();
+      if (!exists) {
+        return res.status(404).json({ error: 'Aucune pochette trouvée' });
+      }
+    }
+
+    const [metadata] = await file.getMetadata();
+    res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    file.createReadStream().pipe(res);
+  } catch (e) {
+    console.error('Erreur /api/pochette:', e);
+    res.status(500).json({ error: 'Erreur serveur pochette' });
+  }
+});
+
 app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
@@ -132,17 +166,18 @@ app.get('/api/next-song', async (req, res) => {
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
 
-    res.json({
-      songName: song.replace('.mp3', ''),
-      fileName: song,
-      url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
-      waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
-      imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
-      color,
-      textColor: inverse,
-      likeCount: stats.likeCount || 0,
-      dislikeCount: stats.dislikeCount || 0,
-    });
+res.json({
+  songName: song.replace('.mp3', ''),
+  fileName: song,
+  url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
+  waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
+  imageUrl: `/api/pochette/${encodeURIComponent(song)}`, // ✅ ICI
+  color,
+  textColor: inverse,
+  likeCount: stats.likeCount || 0,
+  dislikeCount: stats.dislikeCount || 0,
+});
+    
   } catch (e) {
     console.error('Erreur /api/next-song:', e);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -163,17 +198,18 @@ app.get('/api/previous-song', async (req, res) => {
 
     const stats = await getSongStats(song);
 
-    res.json({
-      songName: song.replace('.mp3', ''),
-      fileName: song,
-      url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
-      waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
-      imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
-      color: '#000000',
-      textColor: '#FFFFFF',
-      likeCount: stats.likeCount || 0,
-      dislikeCount: stats.dislikeCount || 0,
-    });
+res.json({
+  songName: song.replace('.mp3', ''),
+  fileName: song,
+  url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
+  waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
+  imageUrl: `/api/pochette/${encodeURIComponent(song)}`, // ✅ ICI
+  color: '#000000',
+  textColor: '#FFFFFF',
+  likeCount: stats.likeCount || 0,
+  dislikeCount: stats.dislikeCount || 0,
+});
+    
   } catch (e) {
     console.error('Erreur /api/previous-song:', e);
     res.status(500).json({ error: 'Erreur serveur' });
