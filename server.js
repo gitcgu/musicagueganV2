@@ -49,7 +49,56 @@ async function getAllMp3(bucketName) {
   return fileNames;
 }
 
-// 1) Fichiers audio/waveform + fallback entre mix et mp3
+async function getSignedUrl(bucketName, fileName) {
+  const file = storage.bucket(bucketName).file(fileName);
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 60 * 60 * 1000,
+    version: 'v4',
+  });
+  return url;
+}
+
+async function getWaveformUrl(bucketName, fileName) {
+  const jsonFileName = WAVE_FOLDER + fileName.replace('.mp3', '.json');
+  const file = storage.bucket(bucketName).file(jsonFileName);
+  const [exists] = await file.exists();
+  if (!exists) return null;
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 60 * 60 * 1000,
+    version: 'v4',
+  });
+  return url;
+}
+
+async function getPochetteUrl() {
+  try {
+    const file = storage.bucket(MP3_BUCKET_NAME).file(POCHETTE_FILENAME);
+    const [exists] = await file.exists();
+    if (!exists) return null;
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000,
+      version: 'v4',
+    });
+    return url;
+  } catch {
+    return null;
+  }
+}
+
+async function getSongStats(songName) {
+  try {
+    const doc = await db.collection('song_stats').doc(songName).get();
+    if (!doc.exists) return { likeCount: 0, dislikeCount: 0 };
+    return doc.data();
+  } catch {
+    return { likeCount: 0, dislikeCount: 0 };
+  }
+}
+
+// 1) Fichiers audio/waveform + fallback
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
     const { type, bucketType, fileName } = req.params;
@@ -71,8 +120,8 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     }
 
     let [exists] = await file.exists();
+
     if (!exists) {
-      // fallback
       if (type === 'audio') file = storage.bucket(secondaryBucket).file(targetName);
       else file = storage.bucket(secondaryBucket).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
       [exists] = await file.exists();
@@ -85,6 +134,7 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
     file.createReadStream().pipe(res);
+
   } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -98,14 +148,12 @@ app.get('/api/pochette/:fileName', async (req, res) => {
     const cleanName = decodeURIComponent(fileName);
     const baseName = cleanName.replace(/\.mp3$/i, '');
 
-    // Pochette spécifique
     const bucket = storage.bucket(MP3_BUCKET_NAME);
     const specificPath = `pochettes/${baseName}.jpg`;
     let file = bucket.file(specificPath);
     let [exists] = await file.exists();
 
     if (!exists) {
-      // Pochette par défaut
       file = bucket.file(POCHETTE_FILENAME);
       ;[exists] = await file.exists();
       if (!exists) {
@@ -123,7 +171,7 @@ app.get('/api/pochette/:fileName', async (req, res) => {
   }
 });
 
-// 3) Mix-list
+// 3) MIX LIST
 app.get('/api/mix-list', async (req, res) => {
   try {
     const mixes = await getAllMp3(MIX_BUCKET_NAME);
@@ -131,7 +179,7 @@ app.get('/api/mix-list', async (req, res) => {
       fileName: mix,
       name: mix.replace('.mp3', ''),
       url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-      waveformUrl: `/api/file/waveform/mix/${encodeURIComponent(mix)}`
+      waveformUrl: `/api/waveform-proxy/mix/${encodeURIComponent(mix)}`
     }));
     res.json(list);
   } catch (e) {
@@ -140,7 +188,31 @@ app.get('/api/mix-list', async (req, res) => {
   }
 });
 
-// 4) NEXT / PREVIOUS pour MP3 et MIX
+// 4) Waveform proxy (pour éviter CORS GCS sur les JSON)
+app.get('/api/waveform-proxy/:bucketType/:fileName', async (req, res) => {
+  try {
+    const bucketType = req.params.bucketType;
+    const fileName = decodeURIComponent(req.params.fileName);
+    const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+    const jsonPath = WAVE_FOLDER + fileName.replace('.mp3', '.json');
+    const file = storage.bucket(bucketName).file(jsonPath);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      return res.status(404).json({ error: 'Waveform not found' });
+    }
+
+    const [content] = await file.download();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(content);
+  } catch (e) {
+    console.error('Erreur waveform-proxy:', e);
+    res.status(500).json({ error: 'Erreur serveur waveform' });
+  }
+});
+
+// 5) NEXT / PREVIOUS pour MP3 et MIX
 app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
@@ -221,7 +293,7 @@ app.get('/api/previous-song', async (req, res) => {
   }
 });
 
-// 5) Feedback
+// 6) Feedback
 app.post('/api/song-feedback', async (req, res) => {
   try {
     const { songName, feedback } = req.body;
@@ -245,7 +317,7 @@ app.post('/api/song-feedback', async (req, res) => {
   }
 });
 
-// 6) Root
+// 7) Root
 app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
