@@ -58,7 +58,7 @@ async function getSongStats(songName) {
   }
 }
 
-// ✅ SERVIR LES FICHIERS AUDIO ET WAVEFORM SANS CORS
+// 1) SERVIR LES FICHIERS AUDIO ET WAVEFORM AVEC FallbackS
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
     const { type, bucketType, fileName } = req.params;
@@ -82,6 +82,7 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     let [exists] = await file.exists();
 
     if (!exists) {
+      // fallback vers l'autre bucket
       if (type === 'audio') file = storage.bucket(secondaryBucket).file(targetName);
       else file = storage.bucket(secondaryBucket).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
       [exists] = await file.exists();
@@ -91,7 +92,6 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
       return res.status(404).json({ error: 'Fichier non trouvé' });
     }
 
-    // ✅ Streaming du fichier audio
     res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
     file.createReadStream().pipe(res);
@@ -102,23 +102,22 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   }
 });
 
-// ✅ SERVIR LA POCHETTE CORRESPONDANTE À UN MP3
+// 2) POCHEtte par MP3
 app.get('/api/pochette/:fileName', async (req, res) => {
   try {
-    const { fileName } = req.params; // ex: "Ma Chanson.mp3"
+    const { fileName } = req.params;
     const cleanName = decodeURIComponent(fileName);
-    const baseName = cleanName.replace(/\.mp3$/i, ''); // "Ma Chanson"
+    const baseName = cleanName.replace(/\.mp3$/i, '');
 
+    // Chercher pochette spécifique
     const bucket = storage.bucket(MP3_BUCKET_NAME);
-
-    // 1. On cherche la pochette spécifique
     const specificPath = `pochettes/${baseName}.jpg`;
     let file = bucket.file(specificPath);
     let [exists] = await file.exists();
 
-    // 2. Si elle n'existe pas, on tombe sur la pochette par défaut
     if (!exists) {
-      file = bucket.file(POCHETTE_FILENAME); // "pochettes/pochette.jpg"
+      // fallback pochette générale
+      file = bucket.file(POCHETTE_FILENAME);
       ;[exists] = await file.exists();
       if (!exists) {
         return res.status(404).json({ error: 'Aucune pochette trouvée' });
@@ -128,7 +127,6 @@ app.get('/api/pochette/:fileName', async (req, res) => {
     const [metadata] = await file.getMetadata();
     res.setHeader('Content-Type', metadata.contentType || 'image/jpeg');
     res.setHeader('Access-Control-Allow-Origin', '*');
-
     file.createReadStream().pipe(res);
   } catch (e) {
     console.error('Erreur /api/pochette:', e);
@@ -136,6 +134,24 @@ app.get('/api/pochette/:fileName', async (req, res) => {
   }
 });
 
+// 3) MIX List (listage)
+app.get('/api/mix-list', async (req, res) => {
+  try {
+    const mixes = await getAllMp3(MIX_BUCKET_NAME);
+    const list = mixes.map(mix => ({
+      fileName: mix,
+      name: mix.replace('.mp3', ''),
+      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
+      waveformUrl: `/api/file/waveform/mix/${encodeURIComponent(mix)}`
+    }));
+    res.json(list);
+  } catch (e) {
+    console.error('Erreur /api/mix-list:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+// 4) NEXT / PREVIOUS pour MP3 (cohérent avec FE)
 app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
@@ -157,23 +173,25 @@ app.get('/api/next-song', async (req, res) => {
     const song = available[Math.floor(Math.random() * available.length)];
     req.session.playedSongs[bucketName].push(song);
 
+    const url = await getSignedUrl(bucketName, song);
+    const waveformUrl = await getWaveformUrl(bucketName, song);
+    const imageUrl = await getPochetteUrl?.() || null;
     const stats = await getSongStats(song);
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
 
-res.json({
-  songName: song.replace('.mp3', ''),
-  fileName: song,
-  url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
-  waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
-  imageUrl: `/api/pochette/${encodeURIComponent(song)}`, // ✅ ICI
-  color,
-  textColor: inverse,
-  likeCount: stats.likeCount || 0,
-  dislikeCount: stats.dislikeCount || 0,
-});
-    
+    res.json({
+      songName: song.replace('.mp3', ''),
+      fileName: song,
+      url,
+      waveformUrl,
+      imageUrl,
+      color,
+      textColor: inverse,
+      likeCount: stats.likeCount || 0,
+      dislikeCount: stats.dislikeCount || 0,
+    });
   } catch (e) {
     console.error('Erreur /api/next-song:', e);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -192,26 +210,29 @@ app.get('/api/previous-song', async (req, res) => {
     req.session.playedSongs[bucketName].pop();
     const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
 
+    const url = await getSignedUrl(bucketName, song);
+    const waveformUrl = await getWaveformUrl(bucketName, song);
+    const imageUrl = await getPochetteUrl?.() || null;
     const stats = await getSongStats(song);
 
-res.json({
-  songName: song.replace('.mp3', ''),
-  fileName: song,
-  url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
-  waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
-  imageUrl: `/api/pochette/${encodeURIComponent(song)}`, // ✅ ICI
-  color: '#000000',
-  textColor: '#FFFFFF',
-  likeCount: stats.likeCount || 0,
-  dislikeCount: stats.dislikeCount || 0,
-});
-    
+    res.json({
+      songName: song.replace('.mp3', ''),
+      fileName: song,
+      url,
+      waveformUrl,
+      imageUrl,
+      color: '#000000',
+      textColor: '#FFFFFF',
+      likeCount: stats.likeCount || 0,
+      dislikeCount: stats.dislikeCount || 0,
+    });
   } catch (e) {
     console.error('Erreur /api/previous-song:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
+// 5) Feedback
 app.post('/api/song-feedback', async (req, res) => {
   try {
     const { songName, feedback } = req.body;
@@ -235,26 +256,7 @@ app.post('/api/song-feedback', async (req, res) => {
   }
 });
 
-//new
-app.get('/api/mix-list', async (req, res) => {
-  try {
-
-    const mixes = await getAllMp3(MIX_BUCKET_NAME);
-
-    const result = mixes.map(mix => ({
-      name: mix.replace('.mp3',''),
-      fileName: mix,
-      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`
-    }));
-
-    res.json(result);
-
-  } catch (e) {
-    console.error('Erreur /api/mix-list:', e);
-    res.status(500).json({ error: 'Erreur serveur' });
-  }
-});
-
+// 6) Root
 app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
