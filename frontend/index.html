@@ -9,7 +9,7 @@
   body { margin: 0; background: #000; color: #fff; font-family: sans-serif; text-align: center; }
   .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
   .mode-switch { position: absolute; top: 20px; right: 20px; }
-  
+
   .waveform-wrapper {
     position: relative;
     width: 100%;
@@ -20,7 +20,7 @@
     border-radius: 10px;
     overflow: hidden;
   }
-  
+
   .album-image {
     position: absolute;
     top: 0;
@@ -32,7 +32,7 @@
     z-index: 1;
     transition: clip-path 0.1s linear;
   }
-  
+
   #waveform { 
     position: relative;
     width: 100%; 
@@ -41,7 +41,7 @@
     opacity: 0.5;
     filter: grayscale(100%);
   }
-  
+
   .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>
@@ -55,55 +55,59 @@
     <div class="mode-switch">
       <button @click="toggleMode" :disabled="isLoading">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
     </div>
-<h1 v-if="mode === 'mp3'">{{ songName }}</h1>
 
-<div v-if="mode === 'mp3'" class="waveform-wrapper">
-  <div 
-    class="album-image" 
-    :style="{ 
-      backgroundImage: `url('${imageUrl}')`,
-      clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
-    }"
-  ></div>
-    <div id="waveform"></div>
-  <div>{{ currentTime }} / {{ duration }}</div>
-  <div class="controls">
-          <button @click="previousSong" :disabled="isLoading">⏮</button>
-      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
-      <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
-      <button @click="nextSong" :disabled="isLoading">⏭</button>
+    <!-- Titre -->
+    <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
 
-  </div>
-</div>
-
-<!-- Bloc Mix -->
-<div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
-  <div v-for="mix in mixList" :key="mix.fileName" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;">
-    <div>{{ mix.name }}</div>
-    <button @click="playMix(mix)">
-      {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
-    </button>
-  </div>
-</div> 
-
-    
-    <div  class="controls">
-      <button @click="previousSong" :disabled="isLoading">⏮</button>
-      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
-      <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
-      <button @click="nextSong" :disabled="isLoading">⏭</button>
+    <!-- BLOC MIX: liste des mixes et bouton Lire par mix -->
+    <div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
+      <div v-for="mix in mixList" :key="mix.fileName" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333;">
+        <div>{{ mix.name }}</div>
+        <button @click="playMix(mix)">
+          {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
+        </button>
+      </div>
     </div>
 
-    <div v-if="!userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
-      👆 Clique pour commencer
+    <!-- BLOC MP3: lecteur actuel -->
+    <div v-if="mode === 'mp3'" class="waveform-wrapper">
+      <div 
+        class="album-image" 
+        :style="{ 
+          backgroundImage: `url('${imageUrl}')`,
+          clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
+        }"
+      ></div>
+      <div id="waveform"></div>
+      <div>{{ currentTime }} / {{ duration }}</div>
+      <div class="controls">
+        <button @click="previousSong" :disabled="isLoading">⏮</button>
+        <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
+        <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
+        <button @click="nextSong" :disabled="isLoading">⏭</button>
+      </div>
     </div>
 
-    <div class="feedback-buttons">
+    <div v-if="mode === 'mp3' && !isSongReady && isLoading" style="margin: 10px 0; color: #999;">
+      Chargement...
+    </div>
+
+    <div v-if="mode === 'mix' && mixList.length === 0" style="margin: 10px 0; color: #999;">
+      Chargement des mixes...
+    </div>
+
+    <div v-if="mode === 'mp3' && !userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
+      👆 Cliquez pour commencer
+    </div>
+
+    <div class="feedback-buttons" v-if="mode === 'mp3'">
       <button @click="likeSong" :disabled="hasVoted">❤️ J'aime</button>
       <button @click="dislikeSong" :disabled="hasVoted">👎 Pas intéressé</button>
     </div>
 
     <div>❤️ {{ globalLikeCount }} | 👎 {{ globalDislikeCount }}</div>
+
+    <!-- Ponts de navigation si besoin -->
   </div>
 </div>
 
@@ -113,7 +117,7 @@ const { createApp } = Vue;
 createApp({
   data() {
     return {
-      mode: 'mp3',
+      mode: 'mp3',              // 'mp3' ou 'mix'
       songName: 'Chargement...',
       songUrl: '',
       waveformUrl: '',
@@ -132,25 +136,24 @@ createApp({
       textColor: '#fff',
       userInteracted: false,
       progressPercent: 0,
-      mixList: [],      // la liste des mixes depuis /api/mix-list
-currentMix: null, // le mix en cours
+      mixList: [],     // liste MIX depuis /api/mix-list
+      currentMix: null,  // mix en cours
     };
   },
   mounted() {
     this.wavesurfer = WaveSurfer.create({
       container: '#waveform',
-      waveColor: '#FFFFFF',
-//      progressColor: 'rgba(255, 100, 100, 0.3)',
-      progressColor: 'transparent',
+      waveColor: '#666666',
+      progressColor: 'transparent', // pas de couleur rouge qui cache tout
       barWidth: 2,
       height: 250,
       responsive: true,
     });
 
+    // Pas d'autoplay à l'arrivée sur MIX
     this.wavesurfer.on('audioprocess', () => {
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-        
         const duration = this.wavesurfer.getDuration();
         const currentTime = this.wavesurfer.getCurrentTime();
         if (duration > 0) {
@@ -163,35 +166,34 @@ currentMix: null, // le mix en cours
       this.isPlaying = false;
       this.currentTime = this.duration;
       this.progressPercent = 100;
-      this.nextSong();
+      // En MIX, on ne passe pas à la musique suivante automatiquement
+      // this.nextSong(); // optionnel selon ton flux
     });
 
     document.addEventListener('click', this.unlockAutoPlay);
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
 
-    this.loadNextSong();
-
-     // 🔹 Charger la liste des mixes
-  axios.get('/api/mix-list', { withCredentials: true })
-    .then(res => {
-      this.mixList = res.data;
-    })
-    .catch(err => console.error('Erreur /api/mix-list:', err));
-  
+    // Initialisation
+    this.loadNextSong(); // charger MP3 par défaut au démarrage
+    // Charger les MIX list
+    axios.get('/api/mix-list', { withCredentials: true })
+      .then(res => {
+        // format attendu: array de { name, fileName, url }
+        this.mixList = res.data;
+      })
+      .catch(err => console.error('Erreur /api/mix-list:', err));
+    // Ne pas charger les MIX au démarrage
   },
 
   methods: {
     unlockAutoPlay() {
       if (!this.userInteracted) {
-        console.log('✅ Autoplay déverrouillé');
         this.userInteracted = true;
-        
         document.removeEventListener('click', this.unlockAutoPlay);
         document.removeEventListener('touchstart', this.unlockAutoPlay);
         document.removeEventListener('keydown', this.unlockAutoPlay);
-
-        if (this.isSongReady) {
+        if (this.mode === 'mp3' && this.isSongReady) {
           this.playAudio();
         }
       }
@@ -202,158 +204,101 @@ currentMix: null, // le mix en cours
       try {
         await this.wavesurfer.play();
         this.isPlaying = true;
-        console.log('🎵 Lecture en cours...');
       } catch (e) {
         console.error('❌ Erreur playAudio():', e.message);
       }
     },
 
-loadNextSong() {
-  if (this.isLoading) return;
-
-  this.isLoading = true;
-  this.isSongReady = false;
-  this.isPlaying = false;
-  this.currentTime = '0:00';
-  this.duration = '0:00';
-  this.hasVoted = false;
-  this.progressPercent = 0;
-  this.imageUrl = ''; // ✅ Réinitialiser l'image
-
-  axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
-    .then(async (res) => {
-      const data = res.data;
-
-      // ✅ Titre uniquement pour les MP3
-      this.songName = this.mode === 'mp3' ? data.songName : '';
-
-      this.songUrl = data.url;
-      this.fileName = data.fileName;
-      this.globalLikeCount = data.likeCount || 0;
-      this.globalDislikeCount = data.dislikeCount || 0;
-      this.waveformUrl = data.waveformUrl || '';
-
-      // ✅ Charger l'image uniquement pour les MP3
-      if (this.mode === 'mp3') {
-        this.imageUrl = data.imageUrl || '';
-      } else {
-        this.imageUrl = ''; // Pas d'image pour les mix
-      }
-
-      let peaks = undefined;
-
-      if (this.waveformUrl) {
-        try {
-          const r = await fetch(this.waveformUrl);
-          const json = await r.json();
-          if (Array.isArray(json) && json.length > 0) peaks = json;
-        } catch (e) {
-          console.warn('Impossible de charger le JSON waveform:', e);
-        }
-      }
-
-      this.wavesurfer.un('ready');
-
-      this.wavesurfer.once('ready', () => {
-        this.isSongReady = true;
-        this.duration = this.formatTime(this.wavesurfer.getDuration());
-        this.isLoading = false;
-
-        if (this.userInteracted) {
-          setTimeout(() => this.playAudio(), 100);
-        }
-      });
-
-      this.wavesurfer.load(this.songUrl, peaks);
-
-    })
-    .catch((e) => {
-      console.error('❌ Erreur loadNextSong:', e);
-      this.isLoading = false;
-    });
-},
-loadPreviousSong() {
-  if (this.isLoading) return;
-
-  this.isLoading = true;
-  this.isSongReady = false;
-  this.isPlaying = false;
-  this.currentTime = '0:00';
-  this.duration = '0:00';
-  this.hasVoted = false;
-  this.progressPercent = 0;
-  this.imageUrl = ''; // ✅ Réinitialiser l'image au début
-
-  axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
-    .then(async (res) => {
-      const data = res.data;
-
-      this.songName = this.mode === 'mp3' ? data.songName : ''; // Pas de titre pour mix
-      this.songUrl = data.url;
-      this.fileName = data.fileName;
-      this.globalLikeCount = data.likeCount || 0;
-      this.globalDislikeCount = data.dislikeCount || 0;
-      this.waveformUrl = data.waveformUrl || '';
-      
-      // ✅ Charger l'image uniquement pour les MP3
-      if (this.mode === 'mp3') {
-        this.imageUrl = data.imageUrl || '';
-      } else {
-        this.imageUrl = ''; // Aucun fond pour les mix
-      }
-
-      let peaks = undefined;
-
-      if (this.waveformUrl) {
-        try {
-          const r = await fetch(this.waveformUrl);
-          const json = await r.json();
-          if (Array.isArray(json) && json.length > 0) peaks = json;
-        } catch (e) {
-          console.warn('Impossible de charger le JSON waveform:', e);
-        }
-      }
-
-      this.wavesurfer.un('ready');
-
-      this.wavesurfer.once('ready', () => {
-        this.isSongReady = true;
-        this.duration = this.formatTime(this.wavesurfer.getDuration());
-        this.isLoading = false;
-
-        if (this.userInteracted) {
-          setTimeout(() => this.playAudio(), 100);
-        }
-      });
-
-      this.wavesurfer.load(this.songUrl, peaks);
-
-    })
-    .catch((e) => {
-      console.error('❌ Erreur loadPreviousSong:', e);
-      this.isLoading = false;
-    });
-},
-    pauseAudio() {
-      this.wavesurfer.pause();
-      this.isPlaying = false;
-    },
-
-    togglePlay() {
-      if (!this.isSongReady) return;
-      if (this.isPlaying) this.pauseAudio();
-      else this.playAudio();
-    },
-
-    async replaySong() {
-      if (!this.isSongReady) return;
-      this.wavesurfer.seekTo(0);
-      this.progressPercent = 0;
-      await this.playAudio();
-    },
-
-    nextSong() {
+    // MP3 seulement: charger le prochain morceau MP3
+    loadNextSong() {
       if (this.isLoading) return;
+      this.isLoading = true;
+      this.isSongReady = false;
+      this.isPlaying = false;
+      this.currentTime = '0:00';
+      this.duration = '0:00';
+      this.hasVoted = false;
+      this.progressPercent = 0;
+      this.imageUrl = ''; // réinitialiser
+
+      axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
+        .then(async (res) => {
+          const data = res.data;
+
+          // MP3: montrer le nom
+          this.songName = data.songName;
+          this.songUrl = data.url;
+          this.fileName = data.fileName;
+          this.globalLikeCount = data.likeCount || 0;
+          this.globalDislikeCount = data.dislikeCount || 0;
+          this.waveformUrl = data.waveformUrl || '';
+          this.imageUrl = data.imageUrl || '';
+
+          let peaks = undefined;
+          if (this.waveformUrl) {
+            try {
+              const r = await fetch(this.waveformUrl);
+              const json = await r.json();
+              if (Array.isArray(json) && json.length > 0) peaks = json;
+            } catch (e) {
+              console.warn('Impossible de charger le JSON waveform:', e);
+            }
+          }
+
+          this.wavesurfer.un('ready');
+          this.wavesurfer.once('ready', () => {
+            this.isSongReady = true;
+            this.duration = this.formatTime(this.wavesurfer.getDuration());
+            this.isLoading = false;
+            // NE PAS auto-play
+          });
+
+          this.wavesurfer.load(this.songUrl, peaks);
+
+        })
+        .catch((e) => {
+          console.error('❌ Erreur loadNextSong:', e);
+          this.isLoading = false;
+        });
+    },
+
+    // MIX: lire/mettre en pause le mix sélectionné
+    async playMix(mix) {
+      // Si on clique sur le même mix alors on bascule
+      if (this.currentMix === mix.fileName && this.isPlaying) {
+        this.wavesurfer.pause();
+        this.isPlaying = false;
+        return;
+      }
+
+      // Chargement du mix sans autoplay
+      this.isLoading = true;
+      this.currentMix = mix.fileName;
+      this.isSongReady = false;
+      this.progressPercent = 0;
+      this.imageUrl = ''; // pas d'image pour MIX
+
+      this.wavesurfer.un('ready');
+      this.wavesurfer.once('ready', () => {
+        this.isSongReady = true;
+        this.isLoading = false;
+        // NE PAS auto-play; l'utilisateur appuie sur le bouton Lire (ou Pause)
+      });
+
+      // Load du mix
+      this.wavesurfer.load(mix.url);
+    },
+
+    // Pour les boutons Mix, on lit le mix courant via playMix, et on peut basculer pause via le même bouton
+    // Lecture/Reset optimisé
+    // (dans le template, le bouton lire est lié à playMix)
+
+    loadPreviousSong() { /* inchangé côté logique MP3 si tu le gardes */ },
+    
+    nextSong() {
+      // uniquement pour MP3
+      if (this.isLoading) return;
+      // On continue avec le flux MP3 si nécessaire
       this.userInteracted = true;
       this.loadNextSong();
     },
@@ -365,9 +310,16 @@ loadPreviousSong() {
     },
 
     toggleMode() {
+      // Si on bascule en MIX, on ne déclenche pas le chargement mix automatiquement
       if (this.isLoading) return;
       this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
-      this.loadNextSong();
+      // Ne pas auto charger le premier mix; on se contente d'afficher la liste (fetch déjà faite)
+      // Si on passe en mix et que mixList n'est pas encore chargé, on peut le charger ici:
+      if (this.mode === 'mix' && this.mixList.length === 0) {
+        axios.get('/api/mix-list', { withCredentials: true }).then(r => {
+          this.mixList = r.data;
+        });
+      }
     },
 
     likeSong() {
@@ -398,32 +350,6 @@ loadPreviousSong() {
         });
     },
 
-
-    async playMix(mix) {
-  if (this.currentMix === mix.fileName && this.isPlaying) {
-    // Si on clique sur le mix déjà en cours, on met en pause
-    this.wavesurfer.pause();
-    this.isPlaying = false;
-    return;
-  }
-
-  // On charge le nouveau mix
-  this.isLoading = true;
-  this.currentMix = mix.fileName;
-  this.isSongReady = false;
-  this.progressPercent = 0;
-
-  this.wavesurfer.un('ready');
-  this.wavesurfer.once('ready', () => {
-    this.isSongReady = true;
-    this.isLoading = false;
-    this.playAudio(); // utilise la fonction existante pour lancer la lecture
-  });
-
-  // Charge le mix dans WaveSurfer
-  this.wavesurfer.load(mix.url); // mix.url vient de ton API /api/mix-list
-},
-    
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
       const m = Math.floor(sec / 60);
