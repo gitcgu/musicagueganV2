@@ -127,8 +127,8 @@ createApp({
       hasVoted: false,
       globalLikeCount: 0,
       globalDislikeCount: 0,
-      mixList: [],     // MIX list depuis /api/mix-list
-      currentMix: null,  // mix en cours
+      mixList: [],     // MIX list
+      currentMix: null,  // mix courant
       bgColor: '#000',
       textColor: '#fff',
       progressPercent: 0
@@ -144,7 +144,7 @@ createApp({
       responsive: true,
     });
 
-    // MP3: progression et affichage
+    // MP3 progression
     this.wavesurfer.on('audioprocess', () => {
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
@@ -164,10 +164,8 @@ createApp({
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
 
-    // Init MP3 par défaut
     this.loadNextSong();
 
-    // Charger MIX en background
     axios.get('/api/mix-list', { withCredentials: true })
       .then(res => {
         this.mixList = res.data;
@@ -198,7 +196,6 @@ createApp({
       }
     },
 
-    // MP3: charger le prochain morceau MP3
     loadNextSong() {
       if (this.isLoading) return;
       this.isLoading = true;
@@ -209,8 +206,6 @@ createApp({
       this.hasVoted = false;
       this.progressPercent = 0;
       this.imageUrl = '';
-
-      this.$http = this.$http || axios; // simple fallback
 
       axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
@@ -250,7 +245,7 @@ createApp({
         });
     },
 
-    // MIX: lire/mettre en pause le mix sélectionné
+    // MIX
     async playMix(mix) {
       if (this.currentMix === mix.fileName && this.isPlaying) {
         this.wavesurfer.pause();
@@ -262,7 +257,7 @@ createApp({
       this.currentMix = mix.fileName;
       this.isSongReady = false;
       this.progressPercent = 0;
-      this.imageUrl = ''; // pas d'image pour MIX
+      this.imageUrl = '';
 
       this.wavesurfer.un('ready');
       this.wavesurfer.once('ready', () => {
@@ -273,8 +268,7 @@ createApp({
       this.wavesurfer.load(mix.url);
     },
 
-    loadPreviousSong() { /* inchangé dans le cadre MP3 si on garde tout */ },
-    
+    loadPreviousSong() { /* inchangé MP3 */ },
     nextSong() { if (this.isLoading) return; this.loadNextSong(); },
     previousSong() { if (this.isLoading) return; this.loadPreviousSong(); },
 
