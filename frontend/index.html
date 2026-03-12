@@ -10,8 +10,8 @@
   .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
   .mode-switch { position: absolute; top: 20px; right: 20px; }
 
+  /* MP3 bloc */
   .waveform-wrapper {
-    position: relative;
     width: 100%;
     max-width: 900px;
     height: 250px;
@@ -19,24 +19,21 @@
     background: #000;
     border-radius: 10px;
     overflow: hidden;
+    position: relative;
   }
 
   .album-image {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-size: cover;
-    background-position: center;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-size: cover; background-position: center;
     z-index: 1;
     transition: clip-path 0.1s linear;
   }
 
   #waveform { 
     position: relative;
-    width: 100%; 
-    height: 100%;
+    width: 100%; height: 100%;
     z-index: 2;
     opacity: 0.5;
     filter: grayscale(100%);
@@ -44,6 +41,11 @@
 
   .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* MIX liste */
+  .mix-list { width: 100%; max-width: 900px; margin-top: 20px; text-align: left; }
+  .mix-item { display:flex; justify-content: space-between; align-items:center; padding: 10px; border-bottom: 1px solid #333; }
+
 </style>
 </head>
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -56,58 +58,51 @@
       <button @click="toggleMode" :disabled="isLoading">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
     </div>
 
-    <!-- Titre -->
-    <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
+    <!-- MP3: lecteur actif -->
+    <div v-if="mode === 'mp3'">
+      <h1>{{ songName }}</h1>
 
-    <!-- BLOC MIX: liste des mixes et bouton Lire par mix -->
-    <div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
-      <div v-for="mix in mixList" :key="mix.fileName" style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #333;">
-        <div>{{ mix.name }}</div>
-        <button @click="playMix(mix)">
-          {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
-        </button>
+      <div class="waveform-wrapper">
+        <div class="album-image" 
+             :style="{ 
+               backgroundImage: `url('${imageUrl}')`,
+               clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
+             }">
+        </div>
+        <div id="waveform"></div>
       </div>
-    </div>
 
-    <!-- BLOC MP3: lecteur actuel -->
-    <div v-if="mode === 'mp3'" class="waveform-wrapper">
-      <div 
-        class="album-image" 
-        :style="{ 
-          backgroundImage: `url('${imageUrl}')`,
-          clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
-        }"
-      ></div>
-      <div id="waveform"></div>
       <div>{{ currentTime }} / {{ duration }}</div>
+
       <div class="controls">
         <button @click="previousSong" :disabled="isLoading">⏮</button>
         <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
         <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
         <button @click="nextSong" :disabled="isLoading">⏭</button>
       </div>
+
+      <div v-if="!userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
+        👆 Cliquez pour commencer
+      </div>
+
+      <div class="feedback-buttons" v-if="mode === 'mp3'">
+        <button @click="likeSong" :disabled="hasVoted">❤️ J'aime</button>
+        <button @click="dislikeSong" :disabled="hasVoted">👎 Pas intéressé</button>
+      </div>
+
+      <div>❤️ {{ globalLikeCount }} | 👎 {{ globalDislikeCount }}</div>
     </div>
 
-    <div v-if="mode === 'mp3' && !isSongReady && isLoading" style="margin: 10px 0; color: #999;">
-      Chargement...
+    <!-- MIX: liste sans auto-load à l'arrivée -->
+    <div v-if="mode === 'mix'" class="mix-list" style="display:block;">
+      <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
+        <div>{{ mix.name || mix.displayName || mix.fileName }}</div>
+        <button @click="playMix(mix)">
+          {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
+        </button>
+      </div>
     </div>
 
-    <div v-if="mode === 'mix' && mixList.length === 0" style="margin: 10px 0; color: #999;">
-      Chargement des mixes...
-    </div>
-
-    <div v-if="mode === 'mp3' && !userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
-      👆 Cliquez pour commencer
-    </div>
-
-    <div class="feedback-buttons" v-if="mode === 'mp3'">
-      <button @click="likeSong" :disabled="hasVoted">❤️ J'aime</button>
-      <button @click="dislikeSong" :disabled="hasVoted">👎 Pas intéressé</button>
-    </div>
-
-    <div>❤️ {{ globalLikeCount }} | 👎 {{ globalDislikeCount }}</div>
-
-    <!-- Ponts de navigation si besoin -->
   </div>
 </div>
 
@@ -132,33 +127,30 @@ createApp({
       hasVoted: false,
       globalLikeCount: 0,
       globalDislikeCount: 0,
+      mixList: [],     // MIX list depuis /api/mix-list
+      currentMix: null,  // mix en cours
       bgColor: '#000',
       textColor: '#fff',
-      userInteracted: false,
-      progressPercent: 0,
-      mixList: [],     // liste MIX depuis /api/mix-list
-      currentMix: null,  // mix en cours
+      progressPercent: 0
     };
   },
   mounted() {
     this.wavesurfer = WaveSurfer.create({
       container: '#waveform',
       waveColor: '#666666',
-      progressColor: 'transparent', // pas de couleur rouge qui cache tout
+      progressColor: 'transparent',
       barWidth: 2,
       height: 250,
       responsive: true,
     });
 
-    // Pas d'autoplay à l'arrivée sur MIX
+    // MP3: progression et affichage
     this.wavesurfer.on('audioprocess', () => {
       if (this.isPlaying) {
         this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
         const duration = this.wavesurfer.getDuration();
         const currentTime = this.wavesurfer.getCurrentTime();
-        if (duration > 0) {
-          this.progressPercent = (currentTime / duration) * 100;
-        }
+        if (duration > 0) this.progressPercent = (currentTime / duration) * 100;
       }
     });
 
@@ -166,24 +158,21 @@ createApp({
       this.isPlaying = false;
       this.currentTime = this.duration;
       this.progressPercent = 100;
-      // En MIX, on ne passe pas à la musique suivante automatiquement
-      // this.nextSong(); // optionnel selon ton flux
     });
 
     document.addEventListener('click', this.unlockAutoPlay);
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
 
-    // Initialisation
-    this.loadNextSong(); // charger MP3 par défaut au démarrage
-    // Charger les MIX list
+    // Init MP3 par défaut
+    this.loadNextSong();
+
+    // Charger MIX en background
     axios.get('/api/mix-list', { withCredentials: true })
       .then(res => {
-        // format attendu: array de { name, fileName, url }
         this.mixList = res.data;
       })
       .catch(err => console.error('Erreur /api/mix-list:', err));
-    // Ne pas charger les MIX au démarrage
   },
 
   methods: {
@@ -209,7 +198,7 @@ createApp({
       }
     },
 
-    // MP3 seulement: charger le prochain morceau MP3
+    // MP3: charger le prochain morceau MP3
     loadNextSong() {
       if (this.isLoading) return;
       this.isLoading = true;
@@ -219,13 +208,12 @@ createApp({
       this.duration = '0:00';
       this.hasVoted = false;
       this.progressPercent = 0;
-      this.imageUrl = ''; // réinitialiser
+      this.imageUrl = '';
 
       axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
           const data = res.data;
 
-          // MP3: montrer le nom
           this.songName = data.songName;
           this.songUrl = data.url;
           this.fileName = data.fileName;
@@ -250,28 +238,24 @@ createApp({
             this.isSongReady = true;
             this.duration = this.formatTime(this.wavesurfer.getDuration());
             this.isLoading = false;
-            // NE PAS auto-play
           });
 
           this.wavesurfer.load(this.songUrl, peaks);
-
         })
-        .catch((e) => {
-          console.error('❌ Erreur loadNextSong:', e);
+        .catch(err => {
+          console.error('❌ Erreur loadNextSong:', err);
           this.isLoading = false;
         });
     },
 
     // MIX: lire/mettre en pause le mix sélectionné
     async playMix(mix) {
-      // Si on clique sur le même mix alors on bascule
       if (this.currentMix === mix.fileName && this.isPlaying) {
         this.wavesurfer.pause();
         this.isPlaying = false;
         return;
       }
 
-      // Chargement du mix sans autoplay
       this.isLoading = true;
       this.currentMix = mix.fileName;
       this.isSongReady = false;
@@ -282,39 +266,27 @@ createApp({
       this.wavesurfer.once('ready', () => {
         this.isSongReady = true;
         this.isLoading = false;
-        // NE PAS auto-play; l'utilisateur appuie sur le bouton Lire (ou Pause)
+        // Pas autoplay
       });
 
-      // Load du mix
       this.wavesurfer.load(mix.url);
     },
 
-    // Pour les boutons Mix, on lit le mix courant via playMix, et on peut basculer pause via le même bouton
-    // Lecture/Reset optimisé
-    // (dans le template, le bouton lire est lié à playMix)
-
-    loadPreviousSong() { /* inchangé côté logique MP3 si tu le gardes */ },
+    loadPreviousSong() { /* inchangé MP3 si tu veux le garder */ },
     
     nextSong() {
-      // uniquement pour MP3
       if (this.isLoading) return;
-      // On continue avec le flux MP3 si nécessaire
-      this.userInteracted = true;
       this.loadNextSong();
     },
 
     previousSong() {
       if (this.isLoading) return;
-      this.userInteracted = true;
       this.loadPreviousSong();
     },
 
     toggleMode() {
-      // Si on bascule en MIX, on ne déclenche pas le chargement mix automatiquement
       if (this.isLoading) return;
       this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
-      // Ne pas auto charger le premier mix; on se contente d'afficher la liste (fetch déjà faite)
-      // Si on passe en mix et que mixList n'est pas encore chargé, on peut le charger ici:
       if (this.mode === 'mix' && this.mixList.length === 0) {
         axios.get('/api/mix-list', { withCredentials: true }).then(r => {
           this.mixList = r.data;
@@ -323,31 +295,11 @@ createApp({
     },
 
     likeSong() {
-      if (this.hasVoted) return;
-      this.hasVoted = true;
-      axios.post('/api/song-feedback', { songName: this.fileName, feedback: 'like' }, { withCredentials: true })
-        .then(res => {
-          this.globalLikeCount = res.data.likeCount || 0;
-          this.globalDislikeCount = res.data.dislikeCount || 0;
-        })
-        .catch(err => {
-          console.error('❌ Feedback like error:', err);
-          this.hasVoted = false;
-        });
+      // optionnel
     },
 
     dislikeSong() {
-      if (this.hasVoted) return;
-      this.hasVoted = true;
-      axios.post('/api/song-feedback', { songName: this.fileName, feedback: 'dislike' }, { withCredentials: true })
-        .then(res => {
-          this.globalLikeCount = res.data.likeCount || 0;
-          this.globalDislikeCount = res.data.dislikeCount || 0;
-        })
-        .catch(err => {
-          console.error('❌ Feedback dislike error:', err);
-          this.hasVoted = false;
-        });
+      // optionnel
     },
 
     formatTime(sec) {
