@@ -38,6 +38,7 @@ const caches = {
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
 };
 
+// Helper: lister les mp3 dans un bucket
 async function getAllMp3(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
@@ -46,6 +47,45 @@ async function getAllMp3(bucketName) {
   const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3'));
   caches[bucketName] = { files: fileNames, loadedAt: now };
   return fileNames;
+}
+
+async function getSignedUrl(bucketName, fileName) {
+  const file = storage.bucket(bucketName).file(fileName);
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 60 * 60 * 1000,
+    version: 'v4',
+  });
+  return url;
+}
+
+async function getWaveformUrl(bucketName, fileName) {
+  const jsonFileName = WAVE_FOLDER + fileName.replace('.mp3', '.json');
+  const file = storage.bucket(bucketName).file(jsonFileName);
+  const [exists] = await file.exists();
+  if (!exists) return null;
+  const [url] = await file.getSignedUrl({
+    action: 'read',
+    expires: Date.now() + 60 * 60 * 1000,
+    version: 'v4',
+  });
+  return url;
+}
+
+async function getPochetteUrl() {
+  try {
+    const file = storage.bucket(MP3_BUCKET_NAME).file(POCHETTE_FILENAME);
+    const [exists] = await file.exists();
+    if (!exists) return null;
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000,
+      version: 'v4',
+    });
+    return url;
+  } catch (e) {
+    return null;
+  }
 }
 
 async function getSongStats(songName) {
@@ -58,7 +98,7 @@ async function getSongStats(songName) {
   }
 }
 
-// 1) SERVIR LES FICHIERS AUDIO ET WAVEFORM AVEC FallbackS
+// 1) Fichiers audio/waveform avec fallback entre mix et mp3
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
     const { type, bucketType, fileName } = req.params;
@@ -95,33 +135,28 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
     file.createReadStream().pipe(res);
-
   } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// 2) POCHEtte par MP3
+// 2) Pochette MP3
 app.get('/api/pochette/:fileName', async (req, res) => {
   try {
     const { fileName } = req.params;
     const cleanName = decodeURIComponent(fileName);
     const baseName = cleanName.replace(/\.mp3$/i, '');
 
-    // Chercher pochette spécifique
     const bucket = storage.bucket(MP3_BUCKET_NAME);
     const specificPath = `pochettes/${baseName}.jpg`;
     let file = bucket.file(specificPath);
     let [exists] = await file.exists();
 
     if (!exists) {
-      // fallback pochette générale
       file = bucket.file(POCHETTE_FILENAME);
       ;[exists] = await file.exists();
-      if (!exists) {
-        return res.status(404).json({ error: 'Aucune pochette trouvée' });
-      }
+      if (!exists) return res.status(404).json({ error: 'Aucune pochette trouvée' });
     }
 
     const [metadata] = await file.getMetadata();
@@ -134,7 +169,7 @@ app.get('/api/pochette/:fileName', async (req, res) => {
   }
 });
 
-// 3) MIX List (listage)
+// 3) MIX LIST
 app.get('/api/mix-list', async (req, res) => {
   try {
     const mixes = await getAllMp3(MIX_BUCKET_NAME);
@@ -151,7 +186,7 @@ app.get('/api/mix-list', async (req, res) => {
   }
 });
 
-// 4) NEXT / PREVIOUS pour MP3 (cohérent avec FE)
+// 4) NEXT / PREVIOUS pour MP3 et MIX (utilisation des URLs signées)
 app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
@@ -175,7 +210,7 @@ app.get('/api/next-song', async (req, res) => {
 
     const url = await getSignedUrl(bucketName, song);
     const waveformUrl = await getWaveformUrl(bucketName, song);
-    const imageUrl = await getPochetteUrl?.() || null;
+    const imageUrl = await getPochetteUrl() || null;
     const stats = await getSongStats(song);
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
@@ -212,7 +247,7 @@ app.get('/api/previous-song', async (req, res) => {
 
     const url = await getSignedUrl(bucketName, song);
     const waveformUrl = await getWaveformUrl(bucketName, song);
-    const imageUrl = await getPochetteUrl?.() || null;
+    const imageUrl = await getPochetteUrl() || null;
     const stats = await getSongStats(song);
 
     res.json({
@@ -232,7 +267,7 @@ app.get('/api/previous-song', async (req, res) => {
   }
 });
 
-// 5) Feedback
+// 5) Song feedback
 app.post('/api/song-feedback', async (req, res) => {
   try {
     const { songName, feedback } = req.body;
@@ -256,7 +291,7 @@ app.post('/api/song-feedback', async (req, res) => {
   }
 });
 
-// 6) Root
+// 6) Root et démarrage
 app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
