@@ -210,6 +210,8 @@ createApp({
       this.progressPercent = 0;
       this.imageUrl = '';
 
+      this.$http = this.$http || axios; // simple fallback
+
       axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
         .then(async (res) => {
           const data = res.data;
@@ -266,40 +268,22 @@ createApp({
       this.wavesurfer.once('ready', () => {
         this.isSongReady = true;
         this.isLoading = false;
-        // Pas autoplay
       });
 
       this.wavesurfer.load(mix.url);
     },
 
-    loadPreviousSong() { /* inchangé MP3 si tu veux le garder */ },
+    loadPreviousSong() { /* inchangé dans le cadre MP3 si on garde tout */ },
     
-    nextSong() {
-      if (this.isLoading) return;
-      this.loadNextSong();
-    },
-
-    previousSong() {
-      if (this.isLoading) return;
-      this.loadPreviousSong();
-    },
+    nextSong() { if (this.isLoading) return; this.loadNextSong(); },
+    previousSong() { if (this.isLoading) return; this.loadPreviousSong(); },
 
     toggleMode() {
       if (this.isLoading) return;
       this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
       if (this.mode === 'mix' && this.mixList.length === 0) {
-        axios.get('/api/mix-list', { withCredentials: true }).then(r => {
-          this.mixList = r.data;
-        });
+        axios.get('/api/mix-list', { withCredentials: true }).then(r => { this.mixList = r.data; });
       }
-    },
-
-    likeSong() {
-      // optionnel
-    },
-
-    dislikeSong() {
-      // optionnel
     },
 
     formatTime(sec) {
