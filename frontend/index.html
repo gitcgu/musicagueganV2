@@ -51,7 +51,9 @@
 <body>
 <div id="app">
   <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
-    <div class="mode-switch">
+<!--    <div class="mode-switch">    J'ai desactiver le bouton -->
+       <div class="mode-switch" v-if="false">
+      
       <button @click="toggleMode" :disabled="isLoading">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
     </div>
 <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
