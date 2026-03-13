@@ -158,6 +158,9 @@ app.get('/api/next-song', async (req, res) => {
     req.session.playedSongs[bucketName].push(song);
 
     const stats = await getSongStats(song);
+    // --- MODIFICATION ICI ---
+    // On cherche dynamiquement l'URL de l'image
+    const imageUrl = await getImageUrl(song, bucketName); 
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
@@ -193,6 +196,9 @@ app.get('/api/previous-song', async (req, res) => {
     const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
 
     const stats = await getSongStats(song);
+       // On cherche dynamiquement l'URL de l'image
+    const imageUrl = await getImageUrl(song, bucketName);
+
 
     res.json({
       songName: song.replace('.mp3', ''),
