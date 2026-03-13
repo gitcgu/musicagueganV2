@@ -187,15 +187,19 @@ app.get('/api/mix-list', async (req, res) => {
 });
 
 // 4) Waveform proxy
+// 4) Waveform proxy (évite les CORS directs vers GCS)
 app.get('/api/waveform-proxy/:bucketType/:fileName', async (req, res) => {
   try {
-    const bucketType = req.params.bucketType; // mix ou mp3
+    const bucketType = req.params.bucketType; // 'mix' ou 'mp3'
     const fileName = decodeURIComponent(req.params.fileName);
     const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
     const jsonPath = WAVE_FOLDER + fileName.replace('.mp3', '.json');
+
     const file = storage.bucket(bucketName).file(jsonPath);
     const [exists] = await file.exists();
-    if (!exists) return res.status(404).json({ error: 'Waveform not found' });
+    if (!exists) {
+      return res.status(404).json({ error: 'Waveform not found' });
+    }
 
     const [content] = await file.download();
     res.setHeader('Content-Type', 'application/json');
