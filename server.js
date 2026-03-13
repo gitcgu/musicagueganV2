@@ -16,6 +16,11 @@ const MIX_BUCKET_NAME = 'musica-mix-bucket';
 const WAVE_FOLDER = 'waveforms/';
 const POCHETTE_FILENAME = 'pochettes/pochette.jpg';
 
+const POCHETTE_FOLDER = 'pochettes/';
+const DEFAULT_POCHETTE_URL = `https://storage.googleapis.com/${MP3_BUCKET_NAME}/${POCHETTE_FILENAME}`;
+
+
+
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
   credentials: true,
@@ -55,6 +60,31 @@ async function getSongStats(songName) {
     return doc.data();
   } catch {
     return { likeCount: 0, dislikeCount: 0 };
+  }
+}
+
+
+async function getImageUrl(songFileName, bucketName) {
+  try {
+    // 1. Définir le chemin de la pochette spécifique (ex: pochettes/mon-titre.jpg)
+    const specificPochettePath = `${POCHETTE_FOLDER}${songFileName.replace('.mp3', '.jpg')}`;
+    const specificPochetteFile = storage.bucket(bucketName).file(specificPochettePath);
+
+    // 2. Vérifier si ce fichier existe dans le bucket
+    const [exists] = await specificPochetteFile.exists();
+
+    // 3. Renvoyer la bonne URL
+    if (exists) {
+      // Si la pochette spécifique existe, on retourne son URL publique
+      return `https://storage.googleapis.com/${bucketName}/${specificPochettePath}`;
+    } else {
+      // Sinon, on retourne l'URL de la pochette par défaut
+      return DEFAULT_POCHETTE_URL;
+    }
+  } catch (error) {
+    console.error(`Erreur lors de la recherche de la pochette pour ${songFileName}:`, error);
+    // En cas d'erreur, on se rabat sur la pochette par défaut
+    return DEFAULT_POCHETTE_URL;
   }
 }
 
@@ -137,7 +167,8 @@ app.get('/api/next-song', async (req, res) => {
       fileName: song,
       url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
       waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
-      imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
+//      imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
+      imageUrl: imageUrl, 
       color,
       textColor: inverse,
       likeCount: stats.likeCount || 0,
@@ -168,7 +199,8 @@ app.get('/api/previous-song', async (req, res) => {
       fileName: song,
       url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
       waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
-      imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
+   //   imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
+            imageUrl: imageUrl, 
       color: '#000000',
       textColor: '#FFFFFF',
       likeCount: stats.likeCount || 0,
