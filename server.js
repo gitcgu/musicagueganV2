@@ -235,7 +235,6 @@ app.get('/api/next-song', async (req, res) => {
     req.session.playedSongs[bucketName].push(song);
 
     const stats = await getSongStats(song);
-    const imageUrl = await getPochetteUrl() || null;
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
@@ -245,7 +244,7 @@ app.get('/api/next-song', async (req, res) => {
       fileName: song,
       url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
       waveformUrl: `/api/waveform-proxy/${mode}/${encodeURIComponent(song)}`,
-      imageUrl,
+      imageUrl: `/api/pochette/${encodeURIComponent(song)}`,
       color,
       textColor: inverse,
       likeCount: stats.likeCount || 0,
@@ -270,14 +269,13 @@ app.get('/api/previous-song', async (req, res) => {
     const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
 
     const stats = await getSongStats(song);
-    const imageUrl = await getPochetteUrl() || null;
 
     res.json({
       songName: song.replace('.mp3', ''),
       fileName: song,
       url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
       waveformUrl: `/api/waveform-proxy/${mode}/${encodeURIComponent(song)}`,
-      imageUrl,
+      imageUrl: `/api/pochette/${encodeURIComponent(song)}`,
       color: '#000000',
       textColor: '#FFFFFF',
       likeCount: stats.likeCount || 0,
