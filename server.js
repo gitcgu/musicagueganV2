@@ -120,7 +120,6 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     }
 
     let [exists] = await file.exists();
-
     if (!exists) {
       if (type === 'audio') file = storage.bucket(secondaryBucket).file(targetName);
       else file = storage.bucket(secondaryBucket).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
@@ -134,7 +133,6 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     res.setHeader('Content-Type', contentType);
     res.setHeader('Access-Control-Allow-Origin', '*');
     file.createReadStream().pipe(res);
-
   } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -188,19 +186,16 @@ app.get('/api/mix-list', async (req, res) => {
   }
 });
 
-// 4) Waveform proxy (pour éviter CORS GCS sur les JSON)
+// 4) Waveform proxy
 app.get('/api/waveform-proxy/:bucketType/:fileName', async (req, res) => {
   try {
-    const bucketType = req.params.bucketType;
+    const bucketType = req.params.bucketType; // mix ou mp3
     const fileName = decodeURIComponent(req.params.fileName);
     const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
     const jsonPath = WAVE_FOLDER + fileName.replace('.mp3', '.json');
     const file = storage.bucket(bucketName).file(jsonPath);
-
     const [exists] = await file.exists();
-    if (!exists) {
-      return res.status(404).json({ error: 'Waveform not found' });
-    }
+    if (!exists) return res.status(404).json({ error: 'Waveform not found' });
 
     const [content] = await file.download();
     res.setHeader('Content-Type', 'application/json');
@@ -285,7 +280,7 @@ app.get('/api/previous-song', async (req, res) => {
       color: '#000000',
       textColor: '#FFFFFF',
       likeCount: stats.likeCount || 0,
-      dislikeCount: stats.dislikeCount || 0,
+      dislikeCount: stats.dislikeCount || 0
     });
   } catch (e) {
     console.error('Erreur /api/previous-song:', e);
