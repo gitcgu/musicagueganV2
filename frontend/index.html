@@ -51,9 +51,8 @@
 <body>
 <div id="app">
   <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
-<!--    <div class="mode-switch">    J'ai desactiver le bouton -->
-       <div class="mode-switch" v-if="false">
-      
+    <div class="mode-switch">  
+<!--    <div class="mode-switch" v-if="false">    J'ai desactiver le bouton -->
       <button @click="toggleMode" :disabled="isLoading">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
     </div>
 <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
@@ -88,12 +87,6 @@
 </div> 
 
     
-    <div  class="controls">
-      <button @click="previousSong" :disabled="isLoading">⏮</button>
-      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
-      <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
-      <button @click="nextSong" :disabled="isLoading">⏭</button>
-    </div>
 
     <div v-if="!userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
       👆 Clique pour commencer
@@ -400,29 +393,18 @@ loadPreviousSong() {
     },
 
 
-    async playMix(mix) {
+ async playMix(mix) {
+
   if (this.currentMix === mix.fileName && this.isPlaying) {
-    // Si on clique sur le mix déjà en cours, on met en pause
-    this.wavesurfer.pause();
+    this.$refs.mixPlayer.pause();
     this.isPlaying = false;
     return;
   }
 
-  // On charge le nouveau mix
-  this.isLoading = true;
   this.currentMix = mix.fileName;
-  this.isSongReady = false;
-  this.progressPercent = 0;
-
-  this.wavesurfer.un('ready');
-  this.wavesurfer.once('ready', () => {
-    this.isSongReady = true;
-    this.isLoading = false;
-    this.playAudio(); // utilise la fonction existante pour lancer la lecture
-  });
-
-  // Charge le mix dans WaveSurfer
-  this.wavesurfer.load(mix.url); // mix.url vient de ton API /api/mix-list
+  this.$refs.mixPlayer.src = mix.url;
+  this.$refs.mixPlayer.play();
+  this.isPlaying = true;
 },
     
     formatTime(sec) {
