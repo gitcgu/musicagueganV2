@@ -79,6 +79,9 @@
     <button @click="nextSong" :disabled="isLoading">⏭</button>
   </div>
 </div>
+
+<!-- Juste avant le bloc Mix -->
+<audio ref="mixPlayer" style="display:none"></audio>
     
 <!-- Bloc Mix -->
 <div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
@@ -396,19 +399,24 @@ loadPreviousSong() {
         });
     },
 
-
- async playMix(mix) {
+async playMix(mix) {
+  const player = this.$refs.mixPlayer;
 
   if (this.currentMix === mix.fileName && this.isPlaying) {
-    this.$refs.mixPlayer.pause();
+    player.pause();
     this.isPlaying = false;
     return;
   }
 
   this.currentMix = mix.fileName;
-  this.$refs.mixPlayer.src = mix.url;
-  this.$refs.mixPlayer.play();
+  player.src = mix.url;
+  await player.play();
   this.isPlaying = true;
+
+  // Pour que le bouton affiche le bon état
+  player.onended = () => {
+    this.isPlaying = false;
+  };
 },
     
     formatTime(sec) {
