@@ -218,6 +218,28 @@ app.get('/api/previous-song', async (req, res) => {
   }
 });
 
+//new
+app.get('/api/mix-list', async (req, res) => {
+  try {
+
+    const mixes = await getAllMp3(MIX_BUCKET_NAME);
+
+    const result = mixes.map(mix => ({
+      name: mix.replace('.mp3',''),
+      fileName: mix,
+      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`
+    }));
+
+    res.json(result);
+
+  } catch (e) {
+    console.error('Erreur /api/mix-list:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+
+
 app.post('/api/song-feedback', async (req, res) => {
   try {
     const { songName, feedback } = req.body;
