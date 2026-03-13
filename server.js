@@ -212,6 +212,7 @@ app.get('/api/waveform-proxy/:bucketType/:fileName', async (req, res) => {
 });
 
 // 5) NEXT / PREVIOUS pour MP3 et MIX
+// 5) NEXT / PREVIOUS pour MP3 et MIX
 app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
@@ -233,10 +234,8 @@ app.get('/api/next-song', async (req, res) => {
     const song = available[Math.floor(Math.random() * available.length)];
     req.session.playedSongs[bucketName].push(song);
 
-    const url = await getSignedUrl(bucketName, song);
-    const waveformUrl = await getWaveformUrl(bucketName, song);
-    const imageUrl = await getPochetteUrl() || null;
     const stats = await getSongStats(song);
+    const imageUrl = await getPochetteUrl() || null;
 
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
@@ -244,8 +243,8 @@ app.get('/api/next-song', async (req, res) => {
     res.json({
       songName: song.replace('.mp3', ''),
       fileName: song,
-      url,
-      waveformUrl,
+      url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
+      waveformUrl: `/api/waveform-proxy/${mode}/${encodeURIComponent(song)}`,
       imageUrl,
       color,
       textColor: inverse,
@@ -270,16 +269,14 @@ app.get('/api/previous-song', async (req, res) => {
     req.session.playedSongs[bucketName].pop();
     const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
 
-    const url = await getSignedUrl(bucketName, song);
-    const waveformUrl = await getWaveformUrl(bucketName, song);
-    const imageUrl = await getPochetteUrl() || null;
     const stats = await getSongStats(song);
+    const imageUrl = await getPochetteUrl() || null;
 
     res.json({
       songName: song.replace('.mp3', ''),
       fileName: song,
-      url,
-      waveformUrl,
+      url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
+      waveformUrl: `/api/waveform-proxy/${mode}/${encodeURIComponent(song)}`,
       imageUrl,
       color: '#000000',
       textColor: '#FFFFFF',
