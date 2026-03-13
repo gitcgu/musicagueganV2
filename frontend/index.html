@@ -304,16 +304,20 @@ createApp({
         });
     },
 
-    togglePlay() {
-      if (!this.isSongReady) return;
-      if (this.isPlaying) {
-        this.wavesurfer.pause();
-        this.isPlaying = false;
-      } else {
-        this.wavesurfer.play();
-        this.isPlaying = true;
-      }
-    },
+async togglePlay() {
+  if (!this.isSongReady) return;
+  try {
+    if (this.isPlaying) {
+      this.wavesurfer.pause();
+      this.isPlaying = false;
+    } else {
+      await this.wavesurfer.play();
+      this.isPlaying = true;
+    }
+  } catch (e) {
+    console.error('Erreur togglePlay:', e);
+  }
+},
 
     replaySong() {
       if (!this.isSongReady) return;
