@@ -148,12 +148,12 @@
   </div>
 </div> 
 <div>{{ currentTime }} / {{ duration }}</div>
-    <div  class="controls">
+<!--    <div  class="controls">
       <button @click="previousSong" :disabled="isLoading">⏮</button>
       <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
       <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
       <button @click="nextSong" :disabled="isLoading">⏭</button>
-    </div>
+    </div>  -->
 
     <div v-if="!userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
       👆 Clique pour commencer
