@@ -214,14 +214,14 @@
       <audio ref="mixPlayer" style="display:none"></audio>
 
       <!-- Bloc Mix -->
-      <div v-if="mode === 'mix'" class="mix-list">
-        <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
-          <div>{{ mix.name }}</div>
-          <button @click="playMix(mix)">
-            {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
-          </button>
-        </div>
-      </div>
+<div v-if="mode === 'mix'" class="mix-list">
+  <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
+    <div>{{ mix.name }}</div>
+    <button @click="selectMix(mix)">
+      {{ currentMix === mix.fileName ? '✔️' : '▶' }}
+    </button>
+  </div>
+</div>
             <!-- Feedback overlay -->
         <div class="feedback-overlay">
           <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
@@ -528,25 +528,9 @@ loadPreviousSong() {
         });
     },
 
-async playMix(mix) {
-  const player = this.$refs.mixPlayer;
-
-  if (this.currentMix === mix.fileName && this.isPlaying) {
-    player.pause();
-    this.isPlaying = false;
-    return;
-  }
-
-  this.currentMix = mix.fileName;
-  player.src = mix.url;
-  await player.play();
-  this.isPlaying = true;
-
-  // Pour que le bouton affiche le bon état
-  player.onended = () => {
-    this.isPlaying = false;
-  };
-},
+  selectMix(mix) {
+    this.currentMix = mix.fileName;
+  },
     
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
