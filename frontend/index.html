@@ -217,8 +217,8 @@
 <div v-if="mode === 'mix'" class="mix-list">
   <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
     <div>{{ mix.name }}</div>
-    <button @click="selectMix(mix)">
-      {{ currentMix === mix.fileName ? '✔️' : '▶' }}
+    <button @click="playMix(mix.url)">
+      {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
     </button>
   </div>
 </div>
@@ -531,6 +531,14 @@ loadPreviousSong() {
   selectMix(mix) {
     this.currentMix = mix.fileName;
   },
+    
+  playMix(url) {
+   const player = this.$refs.mixPlayer;
+   player.src = url;
+   player.play();
+   this.isPlaying = true;
+   player.onended = () => { this.isPlaying = false; };
+     },
     
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
