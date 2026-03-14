@@ -49,68 +49,64 @@
 
   /* NEW BOUTON ROND CONTROLS OVERLAY */
 /* ----------- Player Controls Overlay ----------- */
-
-/* ----------- Player Controls Overlay ----------- */
 .player-controls {
-  position: absolute;             /* par-dessus le waveform */
-  top: 50%;                       /* centré verticalement */
-  left: 50%;                      /* centré horizontalement */
+  position: absolute;
+  top: 50%;
+  left: 50%;
   transform: translate(-50%, -50%);
   display: flex;
   gap: 20px;
   z-index: 3;
-  opacity: 0;                     /* invisible par défaut */
+  opacity: 0;                 /* invisible par défaut sur PC */
   transition: opacity 0.3s ease;
 }
 
-/* apparition au survol (PC) */
 .waveform-wrapper:hover .player-controls {
-  opacity: 1;
+  opacity: 1;                 /* apparition au hover sur PC */
 }
 
-/* sur mobile : toujours visibles */
+/* Mobile : toujours visible */
 @media (hover: none) {
   .player-controls {
     opacity: 1;
   }
 }
 
-/* ----------- Styles des boutons ----------- */
 .player-controls button {
-  /* suppression du style navigateur */
-  -moz-appearance: none;          
   appearance: none;
   -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent; /* supprime le bleu mobile */
-  
-  border: none;            
-  outline: none;           /* supprime contour focus bleu */
-  border-radius: 50%;      
+  -moz-appearance: none;
+  -webkit-tap-highlight-color: transparent; /* supprime le bleu/overlay mobile */
+  outline: none;
+  border: none;
+  border-radius: 50%;
   width: 55px;
   height: 55px;
-  font-size: 20px;
-  background: rgba(0,0,0,0.6);  /* fond semi-transparent */
-  color: white;                  /* couleur icône */
-  
+  background: rgba(0,0,0,0.6);
   cursor: pointer;
-  backdrop-filter: blur(5px);    /* effet flou derrière le bouton */
+  backdrop-filter: blur(5px);
   transition: all 0.2s ease;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
 }
 
-/* bouton play plus gros */
 .player-controls .play-btn {
   width: 70px;
   height: 70px;
-  font-size: 26px;
 }
 
-/* hover léger PC */
+.player-controls button svg {
+  width: 60%;
+  height: 60%;
+}
+
 .player-controls button:hover {
   background: rgba(255,255,255,0.25);
   transform: scale(1.1);
 }
 
-/* état disabled */
 .player-controls button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -140,7 +136,27 @@
 
   <div>{{ currentTime }} / {{ duration }}</div>
 
-  <!-- <div class="controls">   du à new bouton-->
+<div class="player-controls">
+  <button @click="previousSong" :disabled="isLoading">
+    <svg viewBox="0 0 24 24"><polygon points="11,12 22,4 22,20" fill="white"/><rect x="2" y="4" width="3" height="16" fill="white"/></svg>
+  </button>
+
+  <button type="button" class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
+    <svg v-if="!isPlaying" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="white"/></svg>
+    <svg v-else viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18" fill="white"/><rect x="14" y="3" width="5" height="18" fill="white"/></svg>
+  </button>
+
+  <button @click="replaySong" :disabled="!isSongReady || isLoading">
+    <svg viewBox="0 0 24 24"><path d="M12 5V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="white"/></svg>
+  </button>
+
+  <button @click="nextSong" :disabled="isLoading">
+    <svg viewBox="0 0 24 24"><polygon points="13,12 2,4 2,20" fill="white"/><rect x="19" y="4" width="3" height="16" fill="white"/></svg>
+  </button>
+</div>
+
+  
+  <!-- <div class="controls">   du à new bouton OLD 
   <div class="player-controls">
     <button @click="previousSong" :disabled="isLoading">⏮</button>
     <button type="button" class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
@@ -149,7 +165,7 @@
     <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
     <button @click="nextSong" :disabled="isLoading">⏭</button>
   </div>
-</div>
+</div>--> 
 
 <!-- Juste avant le bloc Mix -->
 <audio ref="mixPlayer" style="display:none"></audio>
