@@ -164,7 +164,8 @@
 
       <!-- Mode switch -->
       <div class="mode-switch">
-        <button @click="toggleMode" :disabled="isLoading">
+    <!--    <button @click="toggleMode" :disabled="isLoading">  -->
+        <button @click="toggleMode">
           {{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}
         </button>
       </div>
@@ -501,11 +502,20 @@ loadPreviousSong() {
       this.loadPreviousSong();
     },
 
-    toggleMode() {
-      if (this.isLoading) return;
-      this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
-      this.loadNextSong();
-    },
+toggleMode() {
+  // On change le mode
+  this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
+
+  if (this.mode === 'mp3') {
+    // On charge la prochaine chanson uniquement pour les MP3
+    this.loadNextSong();
+  } else {
+    // Si on est en Mix, rien à charger, juste reset des états MP3
+    this.isPlaying = false;
+    this.currentTime = '0:00';
+    this.progressPercent = 0;
+  }
+},
 
     likeSong() {
       if (this.hasVoted) return;
