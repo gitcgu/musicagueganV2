@@ -390,10 +390,10 @@ loadNextSong() {
         }
       }
 
+      this.wavesurfer.un('ready');
+
       // 🔹 important : nettoyer l'ancien waveform
       this.wavesurfer.empty();
-
-      this.wavesurfer.un('ready');
 
       this.wavesurfer.once('ready', () => {
         this.isSongReady = true;
