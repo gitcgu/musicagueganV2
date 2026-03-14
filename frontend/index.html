@@ -214,15 +214,17 @@
       <audio ref="mixPlayer" style="display:none"></audio>
 
       <!-- Bloc Mix -->
+      
 <div v-if="mode === 'mix'" class="mix-list">
   <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
     <div>{{ mix.name }}</div>
-    <button @click="playMix(mix.url)">
+    <button @click="playMix(mix.url, mix)">
       {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
     </button>
   </div>
 </div>
-            <!-- Feedback overlay -->
+      
+      <!-- Feedback overlay -->
         <div class="feedback-overlay">
           <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
           <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
