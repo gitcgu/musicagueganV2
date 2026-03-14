@@ -209,17 +209,6 @@
           </button>
         </div>
 
-        <!-- Feedback overlay -->
-        <div class="feedback-overlay">
-          <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
-          <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
-        </div>
-
-        <!-- Message “Clique pour commencer” -->
-        <div v-if="!userInteracted && isSongReady" class="start-message">
-          👆 Clique pour commencer
-        </div>
-
       </div> <!-- fin waveform-wrapper -->
 
       <!-- Lecteur audio pour mix -->
@@ -234,6 +223,17 @@
           </button>
         </div>
       </div>
+            <!-- Feedback overlay -->
+        <div class="feedback-overlay">
+          <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
+          <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
+        </div>
+
+        <!-- Message “Clique pour commencer” -->
+        <div v-if="!userInteracted && isSongReady" class="start-message">
+          👆 Clique pour commencer
+        </div>
+
 
     </div> <!-- fin container -->
   </div> <!-- fin app -->
