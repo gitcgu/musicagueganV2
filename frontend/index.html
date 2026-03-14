@@ -50,25 +50,25 @@
   /* NEW BOUTON ROND CONTROLS OVERLAY */
 /* ----------- Player Controls Overlay ----------- */
 
-/* conteneur des boutons */
+/* ----------- Player Controls Overlay ----------- */
 .player-controls {
-  position: absolute;            /* position par-dessus le waveform */
-  top: 50%;                      /* centré verticalement */
-  left: 50%;                     /* centré horizontalement */
-  transform: translate(-50%, -50%); /* recentrage exact */
-  display: flex;                 /* boutons alignés horizontalement */
-  gap: 20px;                     /* espace entre boutons */
-  z-index: 3;                    /* au-dessus de l'album et waveform */
+  position: absolute;             /* par-dessus le waveform */
+  top: 50%;                       /* centré verticalement */
+  left: 50%;                      /* centré horizontalement */
+  transform: translate(-50%, -50%);
+  display: flex;
+  gap: 20px;
+  z-index: 3;
   opacity: 0;                     /* invisible par défaut */
-  transition: opacity 0.3s ease;  /* transition fluide pour apparaitre */
+  transition: opacity 0.3s ease;
 }
 
-/* apparition au survol (PC uniquement) */
+/* apparition au survol (PC) */
 .waveform-wrapper:hover .player-controls {
   opacity: 1;
 }
 
-/* pour mobile : pas de hover, donc toujours visibles */
+/* sur mobile : toujours visibles */
 @media (hover: none) {
   .player-controls {
     opacity: 1;
@@ -77,19 +77,24 @@
 
 /* ----------- Styles des boutons ----------- */
 .player-controls button {
-  appearance: none;          /* ignore le style par défaut navigateur */
-  -webkit-appearance: none;  /* version Safari / iOS */
-  -webkit-tap-highlight-color: transparent; /* supprime le bleu sur mobile */
-  border: none;               /* pas de bord par défaut */
-  border-radius: 50%;         /* boutons ronds */
+  /* suppression du style navigateur */
+  -moz-appearance: none;          
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent; /* supprime le bleu mobile */
+  
+  border: none;            
+  outline: none;           /* supprime contour focus bleu */
+  border-radius: 50%;      
   width: 55px;
   height: 55px;
   font-size: 20px;
-  background: rgba(0,0,0,0.6); /* couleur de fond semi-transparente */
-  color: white;               /* couleur du texte / icône */
+  background: rgba(0,0,0,0.6);  /* fond semi-transparent */
+  color: white;                  /* couleur icône */
+  
   cursor: pointer;
-  backdrop-filter: blur(5px); /* effet flou derrière le bouton */
-  transition: all 0.2s ease;  /* transition fluide pour hover */
+  backdrop-filter: blur(5px);    /* effet flou derrière le bouton */
+  transition: all 0.2s ease;
 }
 
 /* bouton play plus gros */
@@ -99,7 +104,7 @@
   font-size: 26px;
 }
 
-/* hover : effet léger sur PC */
+/* hover léger PC */
 .player-controls button:hover {
   background: rgba(255,255,255,0.25);
   transform: scale(1.1);
@@ -138,7 +143,7 @@
   <!-- <div class="controls">   du à new bouton-->
   <div class="player-controls">
     <button @click="previousSong" :disabled="isLoading">⏮</button>
-    <button class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
+    <button type="button" class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
       {{ isPlaying ? '⏸' : '▶' }}
     </button>
     <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
