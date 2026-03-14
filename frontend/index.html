@@ -532,13 +532,33 @@ loadPreviousSong() {
     this.currentMix = mix.fileName;
   },
     
-  playMix(url) {
-   const player = this.$refs.mixPlayer;
-   player.src = url;
-   player.play();
-   this.isPlaying = true;
-   player.onended = () => { this.isPlaying = false; };
-     },
+playMix(url, mix) {
+  const player = this.$refs.mixPlayer;
+
+  // Si on clique sur le même mix déjà en cours
+  if (this.currentMix === mix.fileName) {
+    if (!player.paused) {
+      // Mettre en pause
+      player.pause();
+      this.isPlaying = false;
+    } else {
+      // Reprendre la lecture
+      player.play();
+      this.isPlaying = true;
+    }
+    return;
+  }
+
+  // Sinon, changer de mix
+  this.currentMix = mix.fileName;
+  player.src = url;
+  player.play();
+  this.isPlaying = true;
+
+  player.onended = () => {
+    this.isPlaying = false;
+  };
+},
     
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
