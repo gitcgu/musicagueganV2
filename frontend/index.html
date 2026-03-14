@@ -46,6 +46,60 @@
   
   .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* NEW BOUTON ROND CONTROLS OVERLAY */
+.player-controls {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  display: flex;
+  gap: 20px;
+
+  z-index: 3; /* au-dessus du waveform */
+
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+/* apparition au survol */
+.waveform-wrapper:hover .player-controls {
+  opacity: 1;
+}
+
+/* boutons ronds */
+.player-controls button {
+  width: 55px;
+  height: 55px;
+
+  border-radius: 50%;
+  border: none;
+
+  background: rgba(0,0,0,0.6);
+  color: white;
+
+  font-size: 20px;
+  cursor: pointer;
+
+  backdrop-filter: blur(6px);
+
+  transition: transform 0.2s, background 0.2s;
+}
+
+/* play plus gros */
+.player-controls .play-btn {
+  width: 70px;
+  height: 70px;
+  font-size: 26px;
+}
+
+/* hover */
+.player-controls button:hover {
+  transform: scale(1.15);
+  background: rgba(255,255,255,0.25);
+}
+  
 </style>
 </head>
 <body>
@@ -70,7 +124,8 @@
 
   <div>{{ currentTime }} / {{ duration }}</div>
 
-  <div class="controls">
+  <!-- <div class="controls">   du à new bouton-->
+  <div class="player-controls">
     <button @click="previousSong" :disabled="isLoading">⏮</button>
     <button @click="togglePlay" :disabled="!isSongReady || isLoading">
       {{ isPlaying ? '⏸' : '▶' }}
