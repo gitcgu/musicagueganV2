@@ -227,7 +227,8 @@ app.get('/api/mix-list', async (req, res) => {
     const result = mixes.map(mix => ({
       name: mix.replace('.mp3',''),
       fileName: mix,
-      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`
+//      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`
+      url: `https://storage.googleapis.com/${MIX_BUCKET_NAME}/${encodeURIComponent(mix)}`
     }));
 
     res.json(result);
