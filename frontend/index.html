@@ -295,15 +295,20 @@ currentMix: null, // le mix en cours
       this.isPlaying = false;
       this.currentTime = this.duration;
       this.progressPercent = 100;
+       // Appeler nextSong uniquement si on est en mode mp3
+      if (this.mode === 'mp3') {
       this.nextSong();
+       }
     });
 
     document.addEventListener('click', this.unlockAutoPlay);
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
 
+// Charger la prochaine chanson uniquement si on est en mode mp3
+  if (this.mode === 'mp3') {
     this.loadNextSong();
-
+  }
      // 🔹 Charger la liste des mixes
   axios.get('/api/mix-list', { withCredentials: true })
     .then(res => {
