@@ -186,9 +186,6 @@
         <!-- Waveform -->
         <div id="waveform"></div>
 
-        <!-- Temps -->
-        <div class="time-display">{{ currentTime }} / {{ duration }}</div>
-
         <!-- Boutons overlay -->
         <div class="player-controls">
           <button @click="previousSong" :disabled="isLoading">
@@ -210,6 +207,8 @@
         </div>
 
       </div> <!-- fin waveform-wrapper -->
+        <!-- Temps -->
+        <div class="time-display">{{ currentTime }} / {{ duration }}</div>
 
       <!-- Lecteur audio pour mix -->
       <audio ref="mixPlayer" style="display:none"></audio>
