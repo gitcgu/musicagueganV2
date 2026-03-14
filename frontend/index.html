@@ -112,93 +112,131 @@
   cursor: not-allowed;
   transform: none;
 }
+
+.feedback-overlay {
+  position: absolute;
+  bottom: 15px;
+  right: 15px;
+  display: flex;
+  gap: 12px;
+  z-index: 4;
+}
+
+.feedback-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  -webkit-tap-highlight-color: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  transition: all 0.2s ease;
+}
+
+.feedback-btn:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.1);
+}
+
+.feedback-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Couleurs spécifiques */
+.like-btn { background: rgba(0,200,0,0.5); }
+.dislike-btn { background: rgba(200,0,0,0.5); }
+  
 </style>
 </head>
 <body>
-<div id="app">
-  <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
-    <div class="mode-switch">  
-<!--    <div class="mode-switch" v-if="false">    J'ai desactiver le bouton -->
-      <button @click="toggleMode" :disabled="isLoading">{{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}</button>
-    </div>
-<h1 v-if="mode === 'mp3'">{{ songName }}</h1>
+  <div id="app">
+    <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
 
-<!-- Bloc Mp3 -->
-<div v-if="mode === 'mp3'" class="waveform-wrapper"> 
-  <div class="album-image"
-       :style="{ 
-         backgroundImage: `url('${imageUrl}')`,
-         clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
-       }">
-  </div>
+      <!-- Mode switch -->
+      <div class="mode-switch">
+        <button @click="toggleMode" :disabled="isLoading">
+          {{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}
+        </button>
+      </div>
 
-  <div id="waveform"></div>
+      <!-- Titre chanson -->
+      <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
 
-  <div>{{ currentTime }} / {{ duration }}</div>
+      <!-- Bloc MP3 -->
+      <div v-if="mode === 'mp3'" class="waveform-wrapper">
 
-<div class="player-controls">
-  <button @click="previousSong" :disabled="isLoading">
-    <svg viewBox="0 0 24 24"><polygon points="11,12 22,4 22,20" fill="white"/><rect x="2" y="4" width="3" height="16" fill="white"/></svg>
-  </button>
+        <!-- Image album -->
+        <div class="album-image"
+             :style="{ 
+               backgroundImage: `url('${imageUrl}')`,
+               clipPath: `inset(0 ${100 - progressPercent}% 0 0)`
+             }">
+        </div>
 
-  <button type="button" class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
-    <svg v-if="!isPlaying" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="white"/></svg>
-    <svg v-else viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18" fill="white"/><rect x="14" y="3" width="5" height="18" fill="white"/></svg>
-  </button>
+        <!-- Waveform -->
+        <div id="waveform"></div>
 
-  <button @click="replaySong" :disabled="!isSongReady || isLoading">
-    <svg viewBox="0 0 24 24"><path d="M12 5V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="white"/></svg>
-  </button>
+        <!-- Temps -->
+        <div class="time-display">{{ currentTime }} / {{ duration }}</div>
 
-  <button @click="nextSong" :disabled="isLoading">
-    <svg viewBox="0 0 24 24"><polygon points="13,12 2,4 2,20" fill="white"/><rect x="19" y="4" width="3" height="16" fill="white"/></svg>
-  </button>
-</div>
+        <!-- Boutons overlay -->
+        <div class="player-controls">
+          <button @click="previousSong" :disabled="isLoading">
+            <svg viewBox="0 0 24 24"><polygon points="11,12 22,4 22,20" fill="white"/><rect x="2" y="4" width="3" height="16" fill="white"/></svg>
+          </button>
 
-  
-  <!-- <div class="controls">   du à new bouton OLD 
-  <div class="player-controls">
-    <button @click="previousSong" :disabled="isLoading">⏮</button>
-    <button type="button" class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
-      {{ isPlaying ? '⏸' : '▶' }}
-    </button>
-    <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
-    <button @click="nextSong" :disabled="isLoading">⏭</button>
-  </div> -->
-</div>
+          <button type="button" class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
+            <svg v-if="!isPlaying" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21" fill="white"/></svg>
+            <svg v-else viewBox="0 0 24 24"><rect x="5" y="3" width="5" height="18" fill="white"/><rect x="14" y="3" width="5" height="18" fill="white"/></svg>
+          </button>
 
-<!-- Juste avant le bloc Mix -->
-<audio ref="mixPlayer" style="display:none"></audio>
-    
-<!-- Bloc Mix -->
-<div v-if="mode === 'mix'" style="width:100%; max-width:900px; margin-top:20px;">
-  <div v-for="mix in mixList" :key="mix.fileName" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;">
-    <div>{{ mix.name }}</div>
-    <button @click="playMix(mix)">
-      {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
-    </button>
-  </div>
-</div> 
-<div>{{ currentTime }} / {{ duration }}</div>
-<!--    <div  class="controls">
-      <button @click="previousSong" :disabled="isLoading">⏮</button>
-      <button @click="togglePlay" :disabled="!isSongReady || isLoading">{{ isPlaying ? '⏸' : '▶' }}</button>
-      <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
-      <button @click="nextSong" :disabled="isLoading">⏭</button>
-    </div>  -->
+          <button @click="replaySong" :disabled="!isSongReady || isLoading">
+            <svg viewBox="0 0 24 24"><path d="M12 5V1L8 5l4 4V6c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" fill="white"/></svg>
+          </button>
 
-    <div v-if="!userInteracted && isSongReady" style="margin: 10px 0; color: #999; font-size: 14px;">
-      👆 Clique pour commencer
-    </div>
+          <button @click="nextSong" :disabled="isLoading">
+            <svg viewBox="0 0 24 24"><polygon points="13,12 2,4 2,20" fill="white"/><rect x="19" y="4" width="3" height="16" fill="white"/></svg>
+          </button>
+        </div>
 
-    <div class="feedback-buttons">
-      <button @click="likeSong" :disabled="hasVoted">❤️ J'aime</button>
-      <button @click="dislikeSong" :disabled="hasVoted">👎 Pas intéressé</button>
-    </div>
+        <!-- Feedback overlay -->
+        <div class="feedback-overlay">
+          <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
+          <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
+        </div>
 
-    <div>❤️ {{ globalLikeCount }} | 👎 {{ globalDislikeCount }}</div>
-  </div>
-</div>
+        <!-- Message “Clique pour commencer” -->
+        <div v-if="!userInteracted && isSongReady" class="start-message">
+          👆 Clique pour commencer
+        </div>
+
+      </div> <!-- fin waveform-wrapper -->
+
+      <!-- Lecteur audio pour mix -->
+      <audio ref="mixPlayer" style="display:none"></audio>
+
+      <!-- Bloc Mix -->
+      <div v-if="mode === 'mix'" class="mix-list">
+        <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
+          <div>{{ mix.name }}</div>
+          <button @click="playMix(mix)">
+            {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
+          </button>
+        </div>
+      </div>
+
+    </div> <!-- fin container -->
+  </div> <!-- fin app -->
 
 <script>
 const { createApp } = Vue;
