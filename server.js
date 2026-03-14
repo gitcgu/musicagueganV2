@@ -238,6 +238,38 @@ app.get('/api/mix-list', async (req, res) => {
   }
 });
 
+app.get('/api/file/audio/mix/:name', async (req, res) => {
+
+  const fileName = req.params.name;
+  const file = storage.bucket(MIX_BUCKET_NAME).file(fileName);
+
+  const [metadata] = await file.getMetadata();
+  const fileSize = metadata.size;
+  const range = req.headers.range;
+
+  if (!range) {
+    res.status(416).send("Range header required");
+    return;
+  }
+
+  const parts = range.replace(/bytes=/, "").split("-");
+  const start = parseInt(parts[0], 10);
+  const end = parts[1]
+    ? parseInt(parts[1], 10)
+    : fileSize - 1;
+
+  const chunkSize = (end - start) + 1;
+
+  res.writeHead(206, {
+    "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+    "Accept-Ranges": "bytes",
+    "Content-Length": chunkSize,
+    "Content-Type": "audio/mpeg",
+  });
+
+  file.createReadStream({ start, end }).pipe(res);
+});
+
 
 
 app.post('/api/song-feedback', async (req, res) => {
