@@ -48,58 +48,68 @@
   button:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* NEW BOUTON ROND CONTROLS OVERLAY */
+/* ----------- Player Controls Overlay ----------- */
+
+/* conteneur des boutons */
 .player-controls {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-
-  display: flex;
-  gap: 20px;
-
-  z-index: 3; /* au-dessus du waveform */
-
-  opacity: 0;
-  transition: opacity 0.3s ease;
+  position: absolute;            /* position par-dessus le waveform */
+  top: 50%;                      /* centré verticalement */
+  left: 50%;                     /* centré horizontalement */
+  transform: translate(-50%, -50%); /* recentrage exact */
+  display: flex;                 /* boutons alignés horizontalement */
+  gap: 20px;                     /* espace entre boutons */
+  z-index: 3;                    /* au-dessus de l'album et waveform */
+  opacity: 0;                     /* invisible par défaut */
+  transition: opacity 0.3s ease;  /* transition fluide pour apparaitre */
 }
 
-/* apparition au survol */
+/* apparition au survol (PC uniquement) */
 .waveform-wrapper:hover .player-controls {
   opacity: 1;
 }
 
-/* boutons ronds */
-.player-controls button {
-  width: 55px;
-  height: 55px;
-
-  border-radius: 50%;
-  border: none;
-
-  background: rgba(0,0,0,0.6);
-  color: white;
-
-  font-size: 20px;
-  cursor: pointer;
-
-  backdrop-filter: blur(6px);
-
-  transition: transform 0.2s, background 0.2s;
+/* pour mobile : pas de hover, donc toujours visibles */
+@media (hover: none) {
+  .player-controls {
+    opacity: 1;
+  }
 }
 
-/* play plus gros */
+/* ----------- Styles des boutons ----------- */
+.player-controls button {
+  appearance: none;          /* ignore le style par défaut navigateur */
+  -webkit-appearance: none;  /* version Safari / iOS */
+  border: none;               /* pas de bord par défaut */
+  border-radius: 50%;         /* boutons ronds */
+  width: 55px;
+  height: 55px;
+  font-size: 20px;
+  background: rgba(0,0,0,0.6); /* couleur de fond semi-transparente */
+  color: white;               /* couleur du texte / icône */
+  cursor: pointer;
+  backdrop-filter: blur(5px); /* effet flou derrière le bouton */
+  transition: all 0.2s ease;  /* transition fluide pour hover */
+}
+
+/* bouton play plus gros */
 .player-controls .play-btn {
   width: 70px;
   height: 70px;
   font-size: 26px;
 }
 
-/* hover */
+/* hover : effet léger sur PC */
 .player-controls button:hover {
-  transform: scale(1.15);
   background: rgba(255,255,255,0.25);
+  transform: scale(1.1);
 }
-  
+
+/* état disabled */
+.player-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
 </style>
 </head>
 <body>
@@ -127,7 +137,7 @@
   <!-- <div class="controls">   du à new bouton-->
   <div class="player-controls">
     <button @click="previousSong" :disabled="isLoading">⏮</button>
-    <button @click="togglePlay" :disabled="!isSongReady || isLoading">
+    <button class="play-btn" @click="togglePlay" :disabled="!isSongReady || isLoading">
       {{ isPlaying ? '⏸' : '▶' }}
     </button>
     <button @click="replaySong" :disabled="!isSongReady || isLoading">↻</button>
