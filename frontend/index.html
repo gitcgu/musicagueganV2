@@ -155,6 +155,36 @@
 /* Couleurs spécifiques */
 .like-btn { background: rgba(0,200,0,0.5); }
 .dislike-btn { background: rgba(200,0,0,0.5); }
+/* new for mix*/
+.mix-item {
+  display: flex;
+  align-items: center;
+  margin: 6px 0;
+  font-size: 16px;
+}
+
+.mix-name {
+  white-space: nowrap;
+}
+
+.dots {
+  flex: 1;
+  border-bottom: 2px dotted rgba(255,255,255,0.4);
+  margin: 0 10px;
+}
+
+.mix-play {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+}
+.mix-time {
+  margin-left: 10px;
+  font-size: 14px;
+  opacity: 0.8;
+}  
   
 </style>
 </head>
@@ -166,7 +196,7 @@
       <div class="mode-switch">
     <!--    <button @click="toggleMode" :disabled="isLoading">  -->
         <button @click="toggleMode">
-          {{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}
+          {{ mode === 'mp3' ? 'Go to MIX list' : 'Back to single MP3' }}
         </button>
       </div>
 
@@ -214,14 +244,26 @@
       <!-- Lecteur audio pour mix -->
       <audio ref="mixPlayer" style="display:none"></audio>
 
-      <!-- Bloc Mix -->
-      
+      <!-- Bloc Mix OLD       
 <div v-if="mode === 'mix'" class="mix-list">
   <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
     <div>{{ mix.name }}</div>
     <button @click="playMix(mix.url, mix)">
       {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
     </button>
+  </div>
+</div>-->
+
+<div v-if="mode === 'mix'" class="mix-list">
+  <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
+    <span class="mix-name">{{ mix.name }}</span>
+    <span class="dots"></span>
+    <button class="mix-play" @click="playMix(mix.url, mix)">
+      {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
+    </button>
+    <span class="mix-time">
+      {{ formatTime(mixCurrentTime) }} / {{ formatTime(mixDuration) }}
+    </span>
   </div>
 </div>
       
@@ -233,7 +275,7 @@
 
         <!-- Message “Clique pour commencer” -->
         <div v-if="!userInteracted && isSongReady" class="start-message">
-          👆 Clique pour commencer
+          👆 Start music
         </div>
 
 
@@ -266,7 +308,9 @@ createApp({
       userInteracted: false,
       progressPercent: 0,
       mixList: [],      // la liste des mixes depuis /api/mix-list
-currentMix: null, // le mix en cours
+       currentMix: null,
+      mixCurrentTime: 0,   //new
+    mixDuration: 0 // new
     };
   },
   mounted() {
@@ -316,6 +360,17 @@ currentMix: null, // le mix en cours
       this.mixList = res.data;
     })
     .catch(err => console.error('Erreur /api/mix-list:', err));
+
+    //also for time ibmix
+    const player = this.$refs.mixPlayer;
+
+    player.addEventListener('timeupdate', () => {
+     this.mixCurrentTime = player.currentTime;
+     });
+
+      player.addEventListener('loadedmetadata', () => {
+     this.mixDuration = player.duration; 
+     });
   
   },
 
