@@ -156,35 +156,44 @@
 .like-btn { background: rgba(0,200,0,0.5); }
 .dislike-btn { background: rgba(200,0,0,0.5); }
 /* new for mix*/
+.mix-list {
+  width: 100%;
+  padding: 5px;
+}
+
 .mix-item {
   display: flex;
   align-items: center;
-  margin: 6px 0;
-  font-size: 16px;
+  font-size: 14px;
+  padding: 6px 0;
 }
 
 .mix-name {
+  max-width: 45%;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dots {
   flex: 1;
-  border-bottom: 2px dotted rgba(255,255,255,0.4);
-  margin: 0 10px;
+  border-bottom: 1px dotted rgba(255,255,255,0.3);
+  margin: 0 6px;
 }
 
 .mix-play {
   background: none;
   border: none;
   color: white;
-  font-size: 18px;
-  cursor: pointer;
+  font-size: 16px;
+  margin-right: 6px;
 }
+
 .mix-time {
-  margin-left: 10px;
-  font-size: 14px;
-  opacity: 0.8;
-}  
+  font-size: 12px;
+  opacity: 0.7;
+  min-width: 60px;
+}
   
 </style>
 </head>
