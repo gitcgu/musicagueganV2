@@ -508,14 +508,19 @@ toggleMode() {
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
   if (this.mode === 'mp3') {
-   //non   this.loadNextSong();
-        // Si Wavesurfer existe déjà, on relance la lecture
-    
-    if (this.wavesurfer) {
-        this.wavesurfer.drawer.drawBuffer();  // redessine la waveform
-      this.wavesurfer.play();
-      this.isPlaying = true;
-    }
+      this.$nextTick(() => {
+      // Vue a recréé le div#waveform
+      if (this.wavesurfer) {
+        this.wavesurfer.container = document.getElementById('waveform');
+        this.wavesurfer.drawBuffer();   // redraw la waveform
+        this.wavesurfer.play();
+        this.isPlaying = true;
+      }
+    });
+   // if (this.wavesurfer) {
+   //   this.wavesurfer.play();
+   //   this.isPlaying = true;
+   // }
   } else {
 // si on passe en mix on arrête wavesurfer
     if (this.wavesurfer) {
