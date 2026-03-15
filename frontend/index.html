@@ -207,10 +207,9 @@
           </button>
         </div>
 
-        <!-- Temps -->
-        <div class="time-display">{{ currentTime }} / {{ duration }}</div>
-
       </div> <!-- fin waveform-wrapper -->
+        <!-- Temps -->
+        <div v-if="mode === 'mp3'" class="time-display">{{ currentTime }} / {{ duration }}</div>
 
       <!-- Lecteur audio pour mix -->
       <audio ref="mixPlayer" style="display:none"></audio>
