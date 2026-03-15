@@ -508,12 +508,11 @@ toggleMode() {
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
   if (this.mode === 'mp3') {
-    // On charge la prochaine chanson uniquement pour les MP3
-     // attendre que Vue recrée le DOM (#waveform)
-    // this.$nextTick(() => {
-      this.loadNextSong();
-    // });
-
+   //non   this.loadNextSong();
+        // Si Wavesurfer existe déjà, on relance la lecture
+    if (this.wavesurfer) {
+      this.wavesurfer.play();
+      this.isPlaying = true;
   } else {
 // si on passe en mix on arrête wavesurfer
     if (this.wavesurfer) {
