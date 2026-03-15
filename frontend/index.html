@@ -510,7 +510,9 @@ toggleMode() {
   if (this.mode === 'mp3') {
    //non   this.loadNextSong();
         // Si Wavesurfer existe déjà, on relance la lecture
+    
     if (this.wavesurfer) {
+        this.wavesurfer.drawer.drawBuffer();  // redessine la waveform
       this.wavesurfer.play();
       this.isPlaying = true;
     }
