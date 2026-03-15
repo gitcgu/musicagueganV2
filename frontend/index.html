@@ -162,12 +162,13 @@
   <div id="app">
     <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
 
-      <!-- Mode switch 
+      <!-- Mode switch -->
       <div class="mode-switch">
-        <button @click="toggleMode" :disabled="isLoading">
+    <!--    <button @click="toggleMode" :disabled="isLoading">  -->
+        <button @click="toggleMode">
           {{ mode === 'mp3' ? 'Passer au MIX' : 'Passer au MP3' }}
         </button>
-      </div>  -->
+      </div>
 
       <!-- Titre chanson -->
       <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
@@ -206,23 +207,26 @@
           </button>
         </div>
 
-      </div> <!-- fin waveform-wrapper -->
         <!-- Temps -->
         <div class="time-display">{{ currentTime }} / {{ duration }}</div>
+
+      </div> <!-- fin waveform-wrapper -->
 
       <!-- Lecteur audio pour mix -->
       <audio ref="mixPlayer" style="display:none"></audio>
 
       <!-- Bloc Mix -->
+      
 <div v-if="mode === 'mix'" class="mix-list">
   <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
     <div>{{ mix.name }}</div>
-    <button @click="selectMix(mix)">
-      {{ currentMix === mix.fileName ? '✔️' : '▶' }}
+    <button @click="playMix(mix.url, mix)">
+      {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
     </button>
   </div>
 </div>
-            <!-- Feedback overlay -->
+      
+      <!-- Feedback overlay -->
         <div class="feedback-overlay">
           <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
           <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
@@ -293,15 +297,20 @@ currentMix: null, // le mix en cours
       this.isPlaying = false;
       this.currentTime = this.duration;
       this.progressPercent = 100;
+       // Appeler nextSong uniquement si on est en mode mp3
+      if (this.mode === 'mp3') {
       this.nextSong();
+       }
     });
 
     document.addEventListener('click', this.unlockAutoPlay);
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
 
+// Charger la prochaine chanson uniquement si on est en mode mp3
+  if (this.mode === 'mp3') {
     this.loadNextSong();
-
+  }
      // 🔹 Charger la liste des mixes
   axios.get('/api/mix-list', { withCredentials: true })
     .then(res => {
@@ -494,11 +503,25 @@ loadPreviousSong() {
       this.loadPreviousSong();
     },
 
-    toggleMode() {
-      if (this.isLoading) return;
-      this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
+toggleMode() {
+  // On change le mode
+  this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
+
+  if (this.mode === 'mp3') {
+    // On charge la prochaine chanson uniquement pour les MP3
+     // attendre que Vue recrée le DOM (#waveform)
+    // this.$nextTick(() => {
       this.loadNextSong();
-    },
+    // });
+
+  } else {
+// si on passe en mix on arrête wavesurfer
+    if (this.wavesurfer) {
+      this.wavesurfer.pause();
+    }
+      this.isPlaying = false;
+  }
+},
 
     likeSong() {
       if (this.hasVoted) return;
@@ -531,6 +554,34 @@ loadPreviousSong() {
   selectMix(mix) {
     this.currentMix = mix.fileName;
   },
+    
+playMix(url, mix) {
+  const player = this.$refs.mixPlayer;
+
+  // Si on clique sur le même mix déjà en cours
+  if (this.currentMix === mix.fileName) {
+    if (!player.paused) {
+      // Mettre en pause
+      player.pause();
+      this.isPlaying = false;
+    } else {
+      // Reprendre la lecture
+      player.play();
+      this.isPlaying = true;
+    }
+    return;
+  }
+
+  // Sinon, changer de mix
+  this.currentMix = mix.fileName;
+  player.src = url;
+  player.play();
+  this.isPlaying = true;
+
+  player.onended = () => {
+    this.isPlaying = false;
+  };
+},
     
     formatTime(sec) {
       if (!sec || !isFinite(sec)) return '0:00';
