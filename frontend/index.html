@@ -194,7 +194,16 @@
   opacity: 0.7;
   min-width: 60px;
 }
-.mix-item.active { background: rgba(255, 255, 255, 0.08); border-radius: 6px; }  
+
+  .mix-item.active {
+background: rgba(255, 255, 255, 0.20);
+border-radius: 6px;
+box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.mix-item.active .mix-name { font-weight: 700; color: #fff; }
+
+
   
 </style>
 </head>
@@ -267,7 +276,8 @@
 <div v-if="mode === 'mix'" class="mix-list">
   <!-- <div v-for="mix in mixList" :key="mix.fileName" class="mix-item"> -->
   <div v-for="mix in mixList" :key="mix.fileName" :class="['mix-item', { active: currentMix === mix.fileName && isPlaying }]" >
-    <span class="mix-name">{{ mix.name }}</span>
+    <!-- <span class="mix-name">{{ mix.name }}</span> -->
+    <span class="mix-name" :title="mix.name">{{ mix.name }}</span>
     <span class="dots"></span>
     <button class="mix-play" @click="playMix(mix.url, mix)">
       {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
