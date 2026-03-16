@@ -194,6 +194,7 @@
   opacity: 0.7;
   min-width: 60px;
 }
+.mix-item.active { background: rgba(255, 255, 255, 0.08); border-radius: 6px; }  
   
 </style>
 </head>
@@ -264,7 +265,8 @@
 </div>-->
 
 <div v-if="mode === 'mix'" class="mix-list">
-  <div v-for="mix in mixList" :key="mix.fileName" class="mix-item">
+  <!-- <div v-for="mix in mixList" :key="mix.fileName" class="mix-item"> -->
+  <div v-for="mix in mixList" :key="mix.fileName" :class="['mix-item', { active: currentMix === mix.fileName && isPlaying }]" >
     <span class="mix-name">{{ mix.name }}</span>
     <span class="dots"></span>
     <button class="mix-play" @click="playMix(mix.url, mix)">
@@ -374,11 +376,15 @@ createApp({
     const player = this.$refs.mixPlayer;
 
     player.addEventListener('timeupdate', () => {
-     this.mixCurrentTime = player.currentTime;
-     });
+    if (this.isPlaying && this.currentMix) {
+    this.mixCurrentTime = player.currentTime;
+    }
+    });
 
-      player.addEventListener('loadedmetadata', () => {
-     this.mixDuration = player.duration; 
+     player.addEventListener('loadedmetadata', () => {
+     if (this.isPlaying && this.currentMix) {
+     this.mixDuration = player.duration;
+     }
      });
   
   },
