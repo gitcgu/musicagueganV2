@@ -605,7 +605,7 @@ loadPreviousSong() {
 
     updateSongHistory(songName) {
   this.songHistory.unshift(songName);
-  if (this.songHistory.length > 3) {
+  if (this.songHistory.length > 7) {
     this.songHistory.pop();
     }
    },
