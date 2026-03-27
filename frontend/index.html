@@ -203,6 +203,16 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 
 .mix-item.active .mix-name { font-weight: 700; color: #fff; }
 
+.previous-songs {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.prev-song {
+  padding: 3px 0;
+}
 
   
 </style>
@@ -219,6 +229,13 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
         </button>
       </div>
 
+      <!-- Les 3 précédents MP3 (grisés) -->
+<div v-if="mode === 'mp3' && songHistory.length > 0" class="previous-songs">
+  <div v-for="(song, idx) in songHistory.slice(1)" :key="idx" class="prev-song">
+    {{ song.songName }}
+  </div>
+</div>
+      
       <!-- Titre chanson -->
       <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
 
@@ -330,7 +347,8 @@ createApp({
       progressPercent: 0,
       mixList: [],      // la liste des mixes depuis /api/mix-list
        currentMix: null,
-      mixCurrentTime: 0,   //new
+          songHistory: [], // Les MP3 précédents
+mixCurrentTime: 0,   //new
     mixDuration: 0 // new
     };
   },
@@ -442,6 +460,8 @@ loadNextSong() {
     .then(async (res) => {
       const data = res.data;
 
+      this.updateSongHistory(data.songName); //NEW affichages chansons
+
       // ✅ Titre uniquement pour les MP3
       this.songName = this.mode === 'mp3' ? data.songName : '';
 
@@ -506,6 +526,7 @@ loadPreviousSong() {
     .then(async (res) => {
       const data = res.data;
 
+    this.updateSongHistory(data.songName); //NEW affichages chansons
       this.songName = this.mode === 'mp3' ? data.songName : ''; // Pas de titre pour mix
       this.songUrl = data.url;
       this.fileName = data.fileName;
@@ -582,6 +603,13 @@ loadPreviousSong() {
       this.loadPreviousSong();
     },
 
+    updateSongHistory(songName) {
+  this.songHistory.unshift(songName);
+  if (this.songHistory.length > 3) {
+    this.songHistory.pop();
+    }
+   },
+    
 toggleMode() {
   // On change le mode
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
