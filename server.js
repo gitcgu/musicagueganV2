@@ -296,6 +296,10 @@ app.post('/api/song-feedback', async (req, res) => {
   }
 });
 
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date() });
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
