@@ -231,7 +231,7 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 
       <!-- Les 3 précédents MP3 (grisés) -->
 <div v-if="mode === 'mp3' && songHistory.length > 0" class="previous-songs">
-  <div v-for="(song, idx) in songHistory.slice(1)" :key="idx" class="prev-song">
+  <div v-for="(song, idx) in songHistory.slice(1).reverse()" :key="idx" class="prev-song">
     {{ song }}
   </div>
 </div>
