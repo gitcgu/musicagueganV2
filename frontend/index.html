@@ -300,7 +300,10 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       {{ currentMix === mix.fileName && isPlaying ? '⏸' : '▶' }}
     </button>
     <span class="mix-time">
-      {{ formatTime(mixCurrentTime) }} / {{ formatTime(mixDuration) }}
+            <!-- ✅ AFFICHE LE TEMPS SEULEMENT POUR LE MIX EN COURS -->
+      {{ currentMix === mix.fileName ? formatTime(mixCurrentTime) + ' / ' + formatTime(mixDuration) : '0:00 / 0:00' }}
+
+      <!-- {{ formatTime(mixCurrentTime) }} / {{ formatTime(mixDuration) }} -->
     </span>
   </div>
 </div>
