@@ -89,6 +89,9 @@ async function getImageUrl(songFileName, bucketName) {
 }
 
 // ✅ SERVIR LES FICHIERS AUDIO ET WAVEFORM SANS CORS
+//NEW WAY
+
+// ✅ SERVIR LES FICHIERS AUDIO ET WAVEFORM SANS CORS
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
     const { type, bucketType, fileName } = req.params;
@@ -121,19 +124,53 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     }
 
     if (!exists) {
-      // Fichier absent dans les deux buckets
       return res.status(404).json({ error: 'Fichier non trouvé' });
     }
 
-    const [content] = await file.download();
-    res.setHeader('Content-Type', contentType);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(content);
+    // ✅ SUPPORT RANGE REQUESTS POUR AUDIO (STREAMING)
+    if (type === 'audio') {
+      const [metadata] = await file.getMetadata();
+      const fileSize = metadata.size;
+      const range = req.headers.range;
+
+      if (range) {
+        // Si Range request
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+
+        res.writeHead(206, {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunkSize,
+          'Content-Type': contentType,
+          'Access-Control-Allow-Origin': '*',
+        });
+
+        file.createReadStream({ start, end }).pipe(res);
+      } else {
+        // Pas de Range: envoyer complet mais indiquer qu'on supporte Range
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Content-Length', fileSize);
+        
+        file.createReadStream().pipe(res);
+      }
+    } else {
+      // Waveform (JSON): pas de Range requests
+      const [content] = await file.download();
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.send(content);
+    }
   } catch (e) {
     console.error('Erreur fichier:', e);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 });
+
 
 
 app.get('/api/next-song', async (req, res) => {
