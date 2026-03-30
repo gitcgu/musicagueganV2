@@ -618,44 +618,34 @@ toggleMode() {
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
   if (this.mode === 'mp3') {
-    this.$nextTick(async () => {
-      if (this.wavesurfer && this.songUrl) {
+    this.$nextTick(() => {
+      // Vérifier que le conteneur existe
+      const container = document.getElementById('waveform');
+      
+      if (container && this.wavesurfer) {
+        // Vider le conteneur
+        container.innerHTML = '';
         
-        // Recharger les peaks
-        let peaks = undefined;
-        if (this.waveformUrl) {
-          try {
-            const r = await fetch(this.waveformUrl);
-            const json = await r.json();
-            if (Array.isArray(json) && json.length > 0) peaks = json;
-          } catch (e) {
-            console.warn('Waveform error:', e);
-          }
+        // Détruire et recréer WaveSurfer
+        if (this.wavesurfer) {
+          this.wavesurfer.destroy();
         }
         
-        // Réinitialiser complètement
-        this.isSongReady = false;
-        this.isPlaying = false;
-        
-        // Attendre que la waveform soit ready
-        this.wavesurfer.once('ready', () => {
-          this.isSongReady = true;
-          this.duration = this.formatTime(this.wavesurfer.getDuration());
-          console.log('✅ Waveform rechargée');
-          
-          // Relancer la lecture
-          setTimeout(() => {
-            this.wavesurfer.play();
-            this.isPlaying = true;
-          }, 100);
+        this.wavesurfer = WaveSurfer.create({
+          container: '#waveform',
+          waveColor: '#FFFFFF',
+          progressColor: 'transparent',
+          barWidth: 2,
+          height: 250,
+          responsive: true,
         });
         
-        // Charger la chanson
-        this.wavesurfer.load(this.songUrl, peaks);
+        // Recharger la chanson
+        this.wavesurfer.load(this.songUrl);
+        this.isSongReady = true;
       }
     });
   } else {
-    // Mode mix: arrêter
     if (this.wavesurfer) {
       this.wavesurfer.pause();
     }
