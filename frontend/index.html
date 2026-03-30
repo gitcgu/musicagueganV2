@@ -618,14 +618,40 @@ toggleMode() {
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
   if (this.mode === 'mp3') {
-    this.$nextTick(() => {
-      // Vue a recréé le div#waveform
-      if (this.wavesurfer && document.getElementById('waveform')) {
-        // Repositionner WaveSurfer sur le nouveau conteneur
-        this.wavesurfer.container = document.getElementById('waveform');
-        this.wavesurfer.drawBuffer();
-        this.wavesurfer.play();
-        this.isPlaying = true;
+    this.$nextTick(async () => {
+      if (this.wavesurfer && this.songUrl) {
+        
+        // Recharger les peaks
+        let peaks = undefined;
+        if (this.waveformUrl) {
+          try {
+            const r = await fetch(this.waveformUrl);
+            const json = await r.json();
+            if (Array.isArray(json) && json.length > 0) peaks = json;
+          } catch (e) {
+            console.warn('Waveform error:', e);
+          }
+        }
+        
+        // Réinitialiser complètement
+        this.isSongReady = false;
+        this.isPlaying = false;
+        
+        // Attendre que la waveform soit ready
+        this.wavesurfer.once('ready', () => {
+          this.isSongReady = true;
+          this.duration = this.formatTime(this.wavesurfer.getDuration());
+          console.log('✅ Waveform rechargée');
+          
+          // Relancer la lecture
+          setTimeout(() => {
+            this.wavesurfer.play();
+            this.isPlaying = true;
+          }, 100);
+        });
+        
+        // Charger la chanson
+        this.wavesurfer.load(this.songUrl, peaks);
       }
     });
   } else {
