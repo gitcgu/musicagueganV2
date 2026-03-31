@@ -378,6 +378,8 @@ createApp({
       mixList: [],      // la liste des mixes depuis /api/mix-list
        currentMix: null,
           songHistory: [], // Les MP3 précédents
+         lastClickTime: 0,  // newnew ✅ Ajoute ça
+    clickDelay: 2000,  // newnew 2 secondes minimum entre clics
 mixCurrentTime: 0,   //new
     mixDuration: 0 // new
     };
@@ -596,18 +598,31 @@ loadPreviousSong() {
       await this.playAudio();
     },
 
-    nextSong() {
-      if (this.isLoading) return;
-      this.userInteracted = true;
-      this.loadNextSong();
-    },
+    //newnew
+nextSong() {
+  const now = Date.now();
+  if (now - this.lastClickTime < this.clickDelay) {
+    console.log('⏳ Attends la fin du chargement...');
+    return; // ✅ Ignore le clic
+  }
+  
+  this.lastClickTime = now;
+  this.userInteracted = true;
+  this.loadNextSong();
+},
 
-    previousSong() {
-      if (this.isLoading) return;
-      this.userInteracted = true;
-      this.loadPreviousSong();
-    },
-
+previousSong() {
+  const now = Date.now();
+  if (now - this.lastClickTime < this.clickDelay) {
+    console.log('⏳ Attends la fin du chargement...');
+    return; // ✅ Ignore le clic
+  }
+  
+  this.lastClickTime = now;
+  this.userInteracted = true;
+  this.loadPreviousSong();
+},
+// fin newnew
     updateSongHistory(songName) {
   this.songHistory.unshift(songName);
   if (this.songHistory.length > 7) {
