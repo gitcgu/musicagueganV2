@@ -421,10 +421,10 @@ mixCurrentTime: 0,   //new
     document.addEventListener('touchstart', this.unlockAutoPlay);
     document.addEventListener('keydown', this.unlockAutoPlay);
 
-// Charger la prochaine chanson uniquement si on est en mode mp3
-  if (this.mode === 'mp3') {
-    this.loadNextSong();
-  }
+// Charger la prochaine chanson uniquement si on est en mode mp3 OPTIM
+//  if (this.mode === 'mp3') {
+//    this.loadNextSong();
+//  }
      // 🔹 Charger la liste des mixes
   axios.get('/api/mix-list', { withCredentials: true })
     .then(res => {
@@ -450,20 +450,23 @@ mixCurrentTime: 0,   //new
   },
 
   methods: {
-    unlockAutoPlay() {
-      if (!this.userInteracted) {
-        console.log('✅ Autoplay déverrouillé');
-        this.userInteracted = true;
-        
-        document.removeEventListener('click', this.unlockAutoPlay);
-        document.removeEventListener('touchstart', this.unlockAutoPlay);
-        document.removeEventListener('keydown', this.unlockAutoPlay);
+  unlockAutoPlay() {
+  if (!this.userInteracted) {
+    console.log('✅ Autoplay déverrouillé');
+    this.userInteracted = true;
+    
+    document.removeEventListener('click', this.unlockAutoPlay);
+    document.removeEventListener('touchstart', this.unlockAutoPlay);
+    document.removeEventListener('keydown', this.unlockAutoPlay);
 
-        if (this.isSongReady) {
-          this.playAudio();
-        }
-      }
-    },
+    // ✅ Charge le MP3 MAINTENANT au premier clic
+    if (this.mode === 'mp3' && !this.isSongReady) {
+      this.loadNextSong();
+    } else if (this.isSongReady) {
+      this.playAudio();
+    }
+  }
+},
 
 rewindMix(mix) {
   const player = this.$refs.mixPlayer;
