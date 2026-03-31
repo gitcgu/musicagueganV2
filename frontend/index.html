@@ -544,6 +544,9 @@ loadNextSong() {
         if (this.userInteracted) {
           setTimeout(() => this.playAudio(), 100);
         }
+         // ✅ AJOUTER JUSTE CETTE LIGNE ICI
+         this.preloadNextWaveform();
+        
       });
 
       this.wavesurfer.load(this.songUrl, peaks);
@@ -554,6 +557,20 @@ loadNextSong() {
       this.isLoading = false;
     });
 },
+
+preloadNextWaveform() {
+  // Charger le prochain waveform sans bloquer
+  axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
+    .then(async (res) => {
+      const data = res.data;
+      // Pré-télécharger le waveform JSON
+      if (data.waveformUrl) {
+        fetch(data.waveformUrl).catch(() => {}); // Ignore les erreurs
+      }
+    })
+    .catch(() => {}); // Silencieux
+},
+    
 loadPreviousSong() {
   if (this.isLoading) return;
 
