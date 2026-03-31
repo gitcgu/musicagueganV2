@@ -417,14 +417,17 @@ mixCurrentTime: 0,   //new
        }
     });
 
-    document.addEventListener('click', this.unlockAutoPlay);
-    document.addEventListener('touchstart', this.unlockAutoPlay);
-    document.addEventListener('keydown', this.unlockAutoPlay);
+    //document.addEventListener('click', this.unlockAutoPlay);
+    //document.addEventListener('touchstart', this.unlockAutoPlay);
+    //document.addEventListener('keydown', this.unlockAutoPlay);
+    document.addEventListener('click', () => this.unlockAutoPlay());
+    document.addEventListener('touchstart', () => this.unlockAutoPlay());
+    document.addEventListener('keydown', () => this.unlockAutoPlay());
 
 // Charger la prochaine chanson uniquement si on est en mode mp3 OPTIM
-//  if (this.mode === 'mp3') {
-//    this.loadNextSong();
-//  }
+  if (this.mode === 'mp3') {
+    this.loadNextSong();
+  }
      // 🔹 Charger la liste des mixes
   axios.get('/api/mix-list', { withCredentials: true })
     .then(res => {
