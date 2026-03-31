@@ -194,11 +194,12 @@ app.get('/api/next-song', async (req, res) => {
     const song = available[Math.floor(Math.random() * available.length)];
     req.session.playedSongs[bucketName].push(song);
 
-    const stats = await getSongStats(song);
-    // --- MODIFICATION ICI ---
-    // On cherche dynamiquement l'URL de l'image
-    const imageUrl = await getImageUrl(song, bucketName); 
-
+    // ✅ PARALLÈLE au lieu de série
+const [stats, imageUrl] = await Promise.all([
+  getSongStats(song),
+  getImageUrl(song, bucketName)
+]);
+    
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
 
