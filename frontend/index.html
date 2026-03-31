@@ -498,41 +498,19 @@ loadNextSong() {
   this.duration = '0:00';
   this.hasVoted = false;
   this.progressPercent = 0;
-  this.imageUrl = ''; // ✅ Réinitialiser l'image
+  this.imageUrl = '';
 
   axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
-    .then(async (res) => {
+    .then((res) => {
       const data = res.data;
 
-      this.updateSongHistory(data.songName); //NEW affichages chansons
-
-      // ✅ Titre uniquement pour les MP3
+      this.updateSongHistory(data.songName);
       this.songName = this.mode === 'mp3' ? data.songName : '';
-
       this.songUrl = data.url;
       this.fileName = data.fileName;
       this.globalLikeCount = data.likeCount || 0;
       this.globalDislikeCount = data.dislikeCount || 0;
-      this.waveformUrl = data.waveformUrl || '';
-
-      // ✅ Charger l'image uniquement pour les MP3
-      if (this.mode === 'mp3') {
-        this.imageUrl = data.imageUrl || '';
-      } else {
-        this.imageUrl = ''; // Pas d'image pour les mix
-      }
-
-      let peaks = undefined;
-
-      if (this.waveformUrl) {
-        try {
-          const r = await fetch(this.waveformUrl);
-          const json = await r.json();
-          if (Array.isArray(json) && json.length > 0) peaks = json;
-        } catch (e) {
-          console.warn('Impossible de charger le JSON waveform:', e);
-        }
-      }
+      this.imageUrl = this.mode === 'mp3' ? data.imageUrl || '' : '';
 
       this.wavesurfer.un('ready');
 
@@ -544,13 +522,10 @@ loadNextSong() {
         if (this.userInteracted) {
           setTimeout(() => this.playAudio(), 100);
         }
-         // ✅ AJOUTER JUSTE CETTE LIGNE ICI
-         this.preloadNextWaveform();
-        
       });
 
-      this.wavesurfer.load(this.songUrl, peaks);
-
+      // ✅ C'EST TOUT - charge direct sans waveform JSON
+      this.wavesurfer.load(this.songUrl);
     })
     .catch((e) => {
       console.error('❌ Erreur loadNextSong:', e);
@@ -558,18 +533,6 @@ loadNextSong() {
     });
 },
 
-preloadNextWaveform() {
-  // Charger le prochain waveform sans bloquer
-  axios.get(`/api/next-song?mode=${this.mode}`, { withCredentials: true })
-    .then(async (res) => {
-      const data = res.data;
-      // Pré-télécharger le waveform JSON
-      if (data.waveformUrl) {
-        fetch(data.waveformUrl).catch(() => {}); // Ignore les erreurs
-      }
-    })
-    .catch(() => {}); // Silencieux
-},
     
 loadPreviousSong() {
   if (this.isLoading) return;
