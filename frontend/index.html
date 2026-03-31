@@ -659,9 +659,22 @@ toggleMode() {
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
   if (this.mode === 'mp3') {
-    this.$nextTick(() => {
-      // ✅ FORCE LE RENDU DE L'IMAGE (ajoute un timestamp)
-      this.imageUrl = this.imageUrl + '?t=' + Date.now();   // Le ?t= force le navigateur à recharger l'image au lieu de la cacher en cache.
+    this.$nextTick(async () => {
+      // ✅ Recharger les données complètes de la chanson
+      try {
+        const res = await axios.get(`/api/next-song?mode=mp3`, { withCredentials: true });
+        const data = res.data;
+        
+        this.songName = data.songName;
+        this.songUrl = data.url;
+        this.fileName = data.fileName;
+        this.waveformUrl = data.waveformUrl || '';
+        this.imageUrl = data.imageUrl || ''; // ✅ Recharger l'image
+        this.globalLikeCount = data.likeCount || 0;
+        this.globalDislikeCount = data.dislikeCount || 0;
+      } catch (e) {
+        console.error('Erreur toggle:', e);
+      }
       
       const container = document.getElementById('waveform');
       
