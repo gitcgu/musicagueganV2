@@ -619,14 +619,11 @@ toggleMode() {
 
   if (this.mode === 'mp3') {
     this.$nextTick(() => {
-      // Vérifier que le conteneur existe
       const container = document.getElementById('waveform');
       
       if (container && this.wavesurfer) {
-        // Vider le conteneur
         container.innerHTML = '';
         
-        // Détruire et recréer WaveSurfer
         if (this.wavesurfer) {
           this.wavesurfer.destroy();
         }
@@ -639,6 +636,9 @@ toggleMode() {
           height: 250,
           responsive: true,
         });
+        
+        // ✅ AJOUTE CETTE LIGNE
+        this.imageUrl = this.imageUrl; // Force le re-render de l'image
         
         // Recharger la chanson
         this.wavesurfer.load(this.songUrl);
