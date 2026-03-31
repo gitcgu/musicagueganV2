@@ -544,38 +544,19 @@ loadPreviousSong() {
   this.duration = '0:00';
   this.hasVoted = false;
   this.progressPercent = 0;
-  this.imageUrl = ''; // ✅ Réinitialiser l'image au début
+  this.imageUrl = '';
 
   axios.get(`/api/previous-song?mode=${this.mode}`, { withCredentials: true })
-    .then(async (res) => {
+    .then((res) => {
       const data = res.data;
 
-    this.updateSongHistory(data.songName); //NEW affichages chansons
-      this.songName = this.mode === 'mp3' ? data.songName : ''; // Pas de titre pour mix
+      this.updateSongHistory(data.songName);
+      this.songName = this.mode === 'mp3' ? data.songName : '';
       this.songUrl = data.url;
       this.fileName = data.fileName;
       this.globalLikeCount = data.likeCount || 0;
       this.globalDislikeCount = data.dislikeCount || 0;
-      this.waveformUrl = data.waveformUrl || '';
-      
-      // ✅ Charger l'image uniquement pour les MP3
-      if (this.mode === 'mp3') {
-        this.imageUrl = data.imageUrl || '';
-      } else {
-        this.imageUrl = ''; // Aucun fond pour les mix
-      }
-
-      let peaks = undefined;
-
-      if (this.waveformUrl) {
-        try {
-          const r = await fetch(this.waveformUrl);
-          const json = await r.json();
-          if (Array.isArray(json) && json.length > 0) peaks = json;
-        } catch (e) {
-          console.warn('Impossible de charger le JSON waveform:', e);
-        }
-      }
+      this.imageUrl = this.mode === 'mp3' ? data.imageUrl || '' : '';
 
       this.wavesurfer.un('ready');
 
@@ -589,8 +570,8 @@ loadPreviousSong() {
         }
       });
 
-      this.wavesurfer.load(this.songUrl, peaks);
-
+      // ✅ C'EST TOUT - charge direct sans waveform JSON
+      this.wavesurfer.load(this.songUrl);
     })
     .catch((e) => {
       console.error('❌ Erreur loadPreviousSong:', e);
