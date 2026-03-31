@@ -606,28 +606,17 @@ loadPreviousSong() {
 
     //newnew
 nextSong() {
-  const now = Date.now();
-  if (now - this.lastClickTime < this.clickDelay) {
-    console.log('⏳ Attends la fin du chargement...');
-    return; // ✅ Ignore le clic
-  }
-  
-  this.lastClickTime = now;
+  // ✅ PAS de debounce pour les appels automatiques (finish event)
   this.userInteracted = true;
   this.loadNextSong();
 },
 
 previousSong() {
-  const now = Date.now();
-  if (now - this.lastClickTime < this.clickDelay) {
-    console.log('⏳ Attends la fin du chargement...');
-    return; // ✅ Ignore le clic
-  }
-  
-  this.lastClickTime = now;
+  // ✅ PAS de debounce
   this.userInteracted = true;
   this.loadPreviousSong();
 },
+    
 // fin newnew
     updateSongHistory(songName) {
   this.songHistory.unshift(songName);
