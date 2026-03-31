@@ -514,11 +514,7 @@ loadNextSong() {
 
       this.updateSongHistory(data.songName);
       this.songName = this.mode === 'mp3' ? data.songName : '';
-      //this.songUrl = data.url;
-      // ✅ Même chose ici
-      const bucketType = this.mode === 'mix' ? 'musica-mix-bucket' : 'musica-mp3-bucket';
-      this.songUrl = `https://storage.googleapis.com/${bucketType}/${encodeURIComponent(data.fileName)}`;
-//make it speed ?
+      this.songUrl = data.url;
       this.fileName = data.fileName;
       this.globalLikeCount = data.likeCount || 0;
       this.globalDislikeCount = data.dislikeCount || 0;
@@ -564,11 +560,7 @@ loadPreviousSong() {
 
       this.updateSongHistory(data.songName);
       this.songName = this.mode === 'mp3' ? data.songName : '';
-//      this.songUrl = data.url;
-            // ✅ Même chose ici
-      const bucketType = this.mode === 'mix' ? 'musica-mix-bucket' : 'musica-mp3-bucket';
-      this.songUrl = `https://storage.googleapis.com/${bucketType}/${encodeURIComponent(data.fileName)}`;
-//make it speed ?
+      this.songUrl = data.url;
       this.fileName = data.fileName;
       this.globalLikeCount = data.likeCount || 0;
       this.globalDislikeCount = data.dislikeCount || 0;
