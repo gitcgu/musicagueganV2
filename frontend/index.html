@@ -619,6 +619,9 @@ toggleMode() {
 
   if (this.mode === 'mp3') {
     this.$nextTick(() => {
+      // ✅ FORCE LE RENDU DE L'IMAGE (ajoute un timestamp)
+      this.imageUrl = this.imageUrl + '?t=' + Date.now();   // Le ?t= force le navigateur à recharger l'image au lieu de la cacher en cache.
+      
       const container = document.getElementById('waveform');
       
       if (container && this.wavesurfer) {
@@ -637,10 +640,6 @@ toggleMode() {
           responsive: true,
         });
         
-        // ✅ AJOUTE CETTE LIGNE
-        this.imageUrl = this.imageUrl; // Force le re-render de l'image
-        
-        // Recharger la chanson
         this.wavesurfer.load(this.songUrl);
         this.isSongReady = true;
       }
