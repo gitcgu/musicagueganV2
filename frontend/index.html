@@ -625,13 +625,12 @@ previousSong() {
     }
    },
 
-    //new toggleMode fix 
-toggleMode() {
+ //fix retour mix image et temps    
+ toggleMode() {
   this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
   if (this.mode === 'mp3') {
     this.$nextTick(async () => {
-      // ✅ Recharger les données complètes de la chanson
       try {
         const res = await axios.get(`/api/next-song?mode=mp3`, { withCredentials: true });
         const data = res.data;
@@ -639,8 +638,7 @@ toggleMode() {
         this.songName = data.songName;
         this.songUrl = data.url;
         this.fileName = data.fileName;
-        this.waveformUrl = data.waveformUrl || '';
-        this.imageUrl = data.imageUrl || ''; // ✅ Recharger l'image
+        this.imageUrl = data.imageUrl || ''; // ✅ Charge l'image
         this.globalLikeCount = data.likeCount || 0;
         this.globalDislikeCount = data.dislikeCount || 0;
       } catch (e) {
@@ -651,10 +649,7 @@ toggleMode() {
       
       if (container && this.wavesurfer) {
         container.innerHTML = '';
-        
-        if (this.wavesurfer) {
-          this.wavesurfer.destroy();
-        }
+        this.wavesurfer.destroy();
         
         this.wavesurfer = WaveSurfer.create({
           container: '#waveform',
@@ -665,8 +660,33 @@ toggleMode() {
           responsive: true,
         });
         
+        // ✅ RÉAJOUTE les event listeners
+        this.wavesurfer.on('audioprocess', () => {
+          if (this.isPlaying) {
+            this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+            const duration = this.wavesurfer.getDuration();
+            const currentTime = this.wavesurfer.getCurrentTime();
+            if (duration > 0) {
+              this.progressPercent = (currentTime / duration) * 100;
+            }
+          }
+        });
+
+        this.wavesurfer.on('finish', () => {
+          this.isPlaying = false;
+          this.currentTime = this.duration;
+          this.progressPercent = 100;
+          if (this.mode === 'mp3') {
+            this.nextSong();
+          }
+        });
+        
+        this.wavesurfer.once('ready', () => {
+          this.isSongReady = true;
+          this.duration = this.formatTime(this.wavesurfer.getDuration());
+        });
+        
         this.wavesurfer.load(this.songUrl);
-        this.isSongReady = true;
       }
     });
   } else {
