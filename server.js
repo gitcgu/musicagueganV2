@@ -88,6 +88,17 @@ async function getImageUrl(songFileName, bucketName) {
   }
 }
 
+// ✅ AJOUTE CETTE FONCTION
+async function getCountryFromIP(ip) {
+  try {
+    const res = await fetch(`http://ip-api.com/json/${ip}?fields=country`);
+    const data = await res.json();
+    return data.country || 'Unknown';
+  } catch {
+    return 'Unknown';
+  }
+}
+
 // ✅ SERVIR LES FICHIERS AUDIO ET WAVEFORM SANS CORS
 //NEW WAY
 
@@ -177,6 +188,11 @@ app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+        // ✅ AJOUTE CES 3 LIGNES AU DÉBUT
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const country = await getCountryFromIP(ip);
+    console.log(`🌍 /api/next-song - IP: ${ip} - Pays: ${country}`);
+
 
     if (!req.session.playedSongs) req.session.playedSongs = {};
     if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName] = [];
@@ -225,7 +241,11 @@ app.get('/api/previous-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const country = await getCountryFromIP(ip);
+    console.log(`🌍 /api/previous-song - IP: ${ip} - Pays: ${country}`);
 
+    
     if (!req.session.playedSongs || !req.session.playedSongs[bucketName] || req.session.playedSongs[bucketName].length < 2) {
       return res.status(400).json({ error: 'Pas de chanson précédente' });
     }
@@ -261,7 +281,11 @@ app.get('/api/mix-list', async (req, res) => {
   try {
 
     const mixes = await getAllMp3(MIX_BUCKET_NAME);
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const country = await getCountryFromIP(ip);
+    console.log(`🌍 /api/mix-list - IP: ${ip} - Pays: ${country}`);
 
+    
     const result = mixes.map(mix => ({
       name: mix.replace('.mp3',''),
       fileName: mix,
