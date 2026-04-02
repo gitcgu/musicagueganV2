@@ -27,6 +27,9 @@ const vertexAI = new VertexAI({
 
 });
 
+// Fonction pour générer description VERTEX
+const API_KEY = 'AIzaSyAzpSrL8V-7AEnuU8f_VsuQytZ8JShBThQ';  // ✅ COLLE LA CLÉ
+
 
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
@@ -345,30 +348,27 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
   file.createReadStream({ start, end }).pipe(res);
 });
 
-// Fonction pour générer description VERTEX
+
 async function generateSongDescription(songName) {
   try {
-    const generativeModel = vertexAI.getGenerativeModel({
-          //  model: 'gemini-1.0-pro',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de gemini-1.5-flash)
-         //   model: 'gemini-pro',  // ✅ C'est le bon nom (pas gemini-1.0-pro)
-             //     model: 'gemini-3.1-pro-preview',  // ✅ C'EST LE NOM EXACT
-        model: 'projects/836359398199/locations/us-central1/publishers/google/models/gemini-3.1-pro-preview',
-
-
-    });
-
-    const response = await generativeModel.generateContent({
-      contents: [{
-        role: 'user',
-        parts: [{
-          text: `Décris brièvement la chanson "${songName.replace('.mp3', '')}" en 2 phrases maximum. Sois créatif.`
-        }]
-      }]
-    });
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
+            }]
+          }]
+        })
+      }
+    );
     
-    return response.response.text();  // ✅ Bonne extraction
+    const data = await response.json();
+    return data.candidates[0].content.parts[0].text;
   } catch (e) {
-    console.error('Erreur Vertex AI:', e);
     return 'Description non disponible';
   }
 }
