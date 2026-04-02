@@ -348,7 +348,7 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
   file.createReadStream({ start, end }).pipe(res);
 });
 
-
+//NEW  FIX VERTEX 
 async function generateSongDescription(songName) {
   try {
     const response = await fetch(
@@ -367,8 +367,10 @@ async function generateSongDescription(songName) {
     );
     
     const data = await response.json();
+    console.log('✅ Gemini Response:', JSON.stringify(data, null, 2));  // ✅ AJOUTE CETTE LIGNE
     return data.candidates[0].content.parts[0].text;
   } catch (e) {
+    console.error('❌ Erreur Gemini API:', e.message);  // ✅ AJOUTE CETTE LIGNE
     return 'Description non disponible';
   }
 }
