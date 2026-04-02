@@ -215,6 +215,14 @@ app.get('/api/next-song', async (req, res) => {
     const song = available[Math.floor(Math.random() * available.length)];
     req.session.playedSongs[bucketName].push(song);
 
+        // ✅ AJOUTE CES 3 LIGNES
+    const description = await generateSongDescription(song);
+    
+    const [stats, imageUrl] = await Promise.all([
+      getSongStats(song),
+      getImageUrl(song, bucketName)
+    ]);
+    
     // ✅ PARALLÈLE au lieu de série
 const [stats, imageUrl] = await Promise.all([
   getSongStats(song),
@@ -230,7 +238,8 @@ const [stats, imageUrl] = await Promise.all([
       url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
       waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
 //      imageUrl: 'https://storage.googleapis.com/musica-mp3-bucket/pochettes/pochette.jpg',
-      imageUrl: imageUrl, 
+      imageUrl: imageUrl,
+     description: description,  // ✅ NOUVELLE CLÉ
       color,
       textColor: inverse,
       likeCount: stats.likeCount || 0,
