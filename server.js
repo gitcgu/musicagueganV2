@@ -218,11 +218,7 @@ app.get('/api/next-song', async (req, res) => {
         // ✅ AJOUTE CES 3 LIGNES
     const description = await generateSongDescription(song);
     
-    const [stats, imageUrl] = await Promise.all([
-      getSongStats(song),
-      getImageUrl(song, bucketName)
-    ]);
-    
+
     // ✅ PARALLÈLE au lieu de série
 const [stats, imageUrl] = await Promise.all([
   getSongStats(song),
