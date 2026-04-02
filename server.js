@@ -18,7 +18,12 @@ const POCHETTE_FILENAME = 'pochettes/pochette.jpg';
 
 const POCHETTE_FOLDER = 'pochettes/';
 const DEFAULT_POCHETTE_URL = `https://storage.googleapis.com/${MP3_BUCKET_NAME}/${POCHETTE_FILENAME}`;
-
+//NEW VERTEX
+const { VertexAI } = require('@google-cloud/vertexai');
+const vertexAI = new VertexAI({
+  project: '836359398199',  // Remplace par ton project GCP
+  location: 'europe-west1',
+});
 
 
 app.use(cors({
@@ -333,7 +338,24 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
   file.createReadStream({ start, end }).pipe(res);
 });
 
-
+// Fonction pour générer description VERTEX
+async function generateSongDescription(songName) {
+  try {
+    const response = await vertexAI.preview.generateContent({
+      contents: [{
+        role: 'user',
+        parts: [{
+          text: `Décris brièvement la chanson "${songName.replace('.mp3', '')}" en 2 phrases maximum. Sois créatif.`
+        }]
+      }]
+    });
+    
+    return response.candidates[0].content.parts[0].text;
+  } catch (e) {
+    console.error('Erreur Vertex AI:', e);
+    return 'Description non disponible';
+  }
+}
 
 app.post('/api/song-feedback', async (req, res) => {
   try {
