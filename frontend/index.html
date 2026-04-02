@@ -257,6 +257,11 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
       <!-- Titre chanson -->
       <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
 
+<!-- ✅ AJOUTE CETTE PARTIE -->
+<p v-if="mode === 'mp3'" style="color: #aaa; font-size: 14px; max-width: 600px; margin: 10px auto;">
+  {{ songDescription }}
+</p>
+      
       <!-- Bloc MP3 -->
       <div v-if="mode === 'mp3'" class="waveform-wrapper">
 
@@ -380,6 +385,7 @@ createApp({
           songHistory: [], // Les MP3 précédents
          lastClickTime: 0,  // newnew ✅ Ajoute ça
     clickDelay: 2000,  // newnew 2 secondes minimum entre clics
+          songDescription: '', //vertex
 mixCurrentTime: 0,   //new
     mixDuration: 0 // new
     };
@@ -534,6 +540,8 @@ loadNextSong() {
 
       // ✅ C'EST TOUT - charge direct sans waveform JSON
       this.wavesurfer.load(this.songUrl);
+//vertex
+      this.songDescription = data.description || 'Pas de description';
     })
     .catch((e) => {
       console.error('❌ Erreur loadNextSong:', e);
