@@ -24,7 +24,6 @@ const vertexAI = new VertexAI({
   project: '836359398199',  // Remplace par ton project GCP
   location: 'europe-west1',
 //    location: 'us-central1',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de europe-west1)    ok=h year
-
 });
 
 // Fonction pour générer description VERTEX
