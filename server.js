@@ -346,7 +346,11 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
 // Fonction pour générer description VERTEX
 async function generateSongDescription(songName) {
   try {
-    const response = await vertexAI.preview.generateContent({
+    const generativeModel = vertexAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',  // ✅ Bon modèle
+    });
+
+    const response = await generativeModel.generateContent({
       contents: [{
         role: 'user',
         parts: [{
@@ -355,7 +359,7 @@ async function generateSongDescription(songName) {
       }]
     });
     
-    return response.candidates[0].content.parts[0].text;
+    return response.response.text();  // ✅ Bonne extraction
   } catch (e) {
     console.error('Erreur Vertex AI:', e);
     return 'Description non disponible';
