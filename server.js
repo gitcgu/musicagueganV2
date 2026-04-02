@@ -351,8 +351,7 @@ async function generateSongDescription(songName) {
     const generativeModel = vertexAI.getGenerativeModel({
           //  model: 'gemini-1.0-pro',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de gemini-1.5-flash)
          //   model: 'gemini-pro',  // ✅ C'est le bon nom (pas gemini-1.0-pro)
-            model: 'gemini-3.1-pro',  // ✅ C'EST LE BON NOM
-
+                  model: 'gemini-3.1-pro-preview',  // ✅ C'EST LE NOM EXACT
 
     });
 
