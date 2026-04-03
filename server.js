@@ -27,7 +27,10 @@ const vertexAI = new VertexAI({
 });
 
 // Fonction pour générer description VERTEX
-const API_KEY = 'AIzaSyAzpSrL8V-7AEnuU8f_VsuQytZ8JShBThQ';  // ✅ COLLE LA CLÉ
+//const API_KEY = '';  // ✅ COLLE LA CLÉ
+const API_KEY = process.env.VERTEX_KEY;
+
+
 
 
 app.use(cors({
