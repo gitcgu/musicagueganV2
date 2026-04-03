@@ -28,10 +28,7 @@ const vertexAI = new VertexAI({
 
 // Fonction pour générer description VERTEX
 //const API_KEY = '';  // ✅ COLLE LA CLÉ
-const API_KEY = process.env.VERTEX_KEY;
-
-
-
+//const API_KEY = process.env.VERTEX_KEY;
 
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
@@ -353,26 +350,22 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
 //NEW  FIX VERTEX 
 async function generateSongDescription(songName) {
   try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
-            }]
-          }]
-        })
-      }
-    );
+    const model = vertexAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+    });
     
-    const data = await response.json();
-    console.log('✅ Gemini Response:', JSON.stringify(data, null, 2));  // ✅ AJOUTE CETTE LIGNE
-    return data.candidates[0].content.parts[0].text;
+    const response = await model.generateContent({
+      contents: [{
+        parts: [{
+          text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
+        }]
+      }]
+    });
+    
+    console.log('✅ Description générée:', response.response.text());
+    return response.response.text();
   } catch (e) {
-    console.error('❌ Erreur Gemini API:', e.message);  // ✅ AJOUTE CETTE LIGNE
+    console.error('❌ Erreur Vertex AI:', e.message);
     return 'Description non disponible';
   }
 }
