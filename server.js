@@ -19,12 +19,12 @@ const POCHETTE_FILENAME = 'pochettes/pochette.jpg';
 const POCHETTE_FOLDER = 'pochettes/';
 const DEFAULT_POCHETTE_URL = `https://storage.googleapis.com/${MP3_BUCKET_NAME}/${POCHETTE_FILENAME}`;
 //NEW VERTEX
-//const { VertexAI } = require('@google-cloud/vertexai');
-//const vertexAI = new VertexAI({
-//  project: '836359398199',  // Remplace par ton project GCP
+const { VertexAI } = require('@google-cloud/vertexai');
+const vertexAI = new VertexAI({
+  project: '836359398199',  // Remplace par ton project GCP
 //  location: 'europe-west1',
-//    location: 'us-central1',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de europe-west1)    ok=h year
-//});
+    location: 'us-central1',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de europe-west1)    ok=h year
+});
 const API_KEY = 'AIzaSyB70H37z9n1qY9YV0zUUjGcN_uVD-0L1ZY';
 
 // Fonction pour générer description VERTEX
@@ -349,35 +349,25 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
 });
 
 //NEW  FIX VERTEX 
-
 async function generateSongDescription(songName) {
   try {
-    const response = await fetch(
-     // `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
-//      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.0-pro:generateContent?key=${API_KEY}`,
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`,
-
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
-            }]
-          }]
-        })
-      }
-    );
-    
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-    return data.candidates[0].content.parts[0].text;
+    const model = vertexAI.getGenerativeModel({ model: 'gemini-pro' });
+    const response = await model.generateContent({
+      contents: [{
+        parts: [{
+          text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
+        }]
+      }]
+    });
+    return response.response.text();
   } catch (e) {
     console.error('❌ Erreur Gemini:', e.message);
     return 'Description non disponible';
   }
 }
+
+
+
 
 app.post('/api/song-feedback', async (req, res) => {
   try {
