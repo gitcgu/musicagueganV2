@@ -25,11 +25,11 @@ const vertexAI = new VertexAI({
 //  location: 'europe-west1',
     location: 'us-central1',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de europe-west1)    ok=h year
 });
-const API_KEY = 'AIzaSyB70H37z9n1qY9YV0zUUjGcN_uVD-0L1ZY';
+//const API_KEY = 'AIzaSyB70H37z9n1qY9YV0zUUjGcN_uVD-0L1ZY';
 
 // Fonction pour générer description VERTEX
 //const API_KEY = '';  // ✅ COLLE LA CLÉ
-//const API_KEY = process.env.VERTEX_KEY;
+const API_KEY = process.env.VERTEX_KEY;
 
 app.use(cors({
   origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'],
