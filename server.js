@@ -356,6 +356,7 @@ async function generateSongDescription(songName) {
     const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
     const response = await model.generateContent({
       contents: [{
+        role: 'user',  // ← NEW
         parts: [{
           text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
         }]
