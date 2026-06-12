@@ -362,7 +362,9 @@ async function generateSongDescription(songName) {
         }]
       }]
     });
-    return response.response.text();
+//    return response.response.text();
+    return response.text();
+
   } catch (e) {
     console.error('❌ Erreur Gemini:', e.message);
     return 'Description non disponible';
