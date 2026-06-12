@@ -351,7 +351,9 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
 async function generateSongDescription(songName) {
   try {
     // const model = vertexAI.getGenerativeModel({ model: 'gemini-pro' });
-    const model = vertexAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
+    // const model = vertexAI.getGenerativeModel({ model: 'gemini-1.5-pro' }); 
+    //gemini-2.5-pro
+    const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
     const response = await model.generateContent({
       contents: [{
         parts: [{
