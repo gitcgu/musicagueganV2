@@ -364,7 +364,9 @@ async function generateSongDescription(songName) {
     });
 //    return response.response.text();
 //    return response.text();
-    return response.candidates[0].content.parts[0].text;  // ← LA BONNE STRUCTURE
+//    return response.candidates[0].content.parts[0].text;  // ← LA BONNE STRUCTURE
+   console.log('DEBUG RESPONSE:', JSON.stringify(response, null, 2));
+    return 'temp';
 
 
   } catch (e) {
