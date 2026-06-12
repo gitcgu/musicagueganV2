@@ -388,7 +388,21 @@ async function generateSongDescription(songName) {
   }
 }
 
-
+//route pour tout generer https://musica-backend-xxx.run.app/api/generate-all-descriptions
+app.get('/api/generate-all-descriptions', async (req, res) => {
+  try {
+    const allSongs = await getAllMp3(MP3_BUCKET_NAME);
+    
+    // Générer en parallèle (pas un par un)
+    const promises = allSongs.map(song => generateSongDescription(song));
+    await Promise.all(promises);
+    
+    res.json({ success: true, count: allSongs.length });
+  } catch (e) {
+    console.error('Erreur batch:', e);
+    res.status(500).json({ error: e.message });
+  }
+});
 
 
 app.post('/api/song-feedback', async (req, res) => {
