@@ -353,6 +353,13 @@ async function generateSongDescription(songName) {
     // const model = vertexAI.getGenerativeModel({ model: 'gemini-pro' });
     // const model = vertexAI.getGenerativeModel({ model: 'gemini-1.5-pro' }); 
     //gemini-2.5-pro
+        // 1. Chercher dans le cache (Firestore)
+    const doc = await db.collection('song_descriptions').doc(songName).get();
+    if (doc.exists) {
+      console.log('✅ Description du cache');
+      return doc.data().text;
+    }
+    // 2. Si pas en cache, générer avec Gemini
     const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
     const response = await model.generateContent({
       contents: [{
@@ -365,8 +372,14 @@ async function generateSongDescription(songName) {
 //    return response.response.text();
 //    return response.text();
 //    return response.candidates[0].content.parts[0].text;  // ← LA BONNE STRUCTURE
-    return response.response.candidates[0].content.parts[0].text;
+    // return response.response.candidates[0].content.parts[0].text;
    //console.log('DEBUG RESPONSE:', JSON.stringify(response, null, 2));
+    const text = response.response.candidates[0].content.parts[0].text;
+
+    // 3. Sauvegarder dans le cache
+    await db.collection('song_descriptions').doc(songName).set({ text });
+
+    return text;
 
 
   } catch (e) {
