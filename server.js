@@ -392,10 +392,21 @@ async function generateSongDescription(songName) {
 app.get('/api/generate-all-descriptions', async (req, res) => {
   try {
     const allSongs = await getAllMp3(MP3_BUCKET_NAME);
+    const batchSize = 100;
+    let processed = 0;
     
-    // Générer en parallèle (pas un par un)
-    const promises = allSongs.map(song => generateSongDescription(song));
-    await Promise.all(promises);
+    for (let i = 0; i < allSongs.length; i += batchSize) {
+      const batch = allSongs.slice(i, i + batchSize);
+      await Promise.all(batch.map(song => generateSongDescription(song)));
+      
+      processed += batch.length;
+      console.log(`✅ Batch complété: ${processed}/${allSongs.length} chansons`);
+      
+      // Pause de 2 secondes entre les batchs
+      if (i + batchSize < allSongs.length) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
     
     res.json({ success: true, count: allSongs.length });
   } catch (e) {
@@ -403,7 +414,6 @@ app.get('/api/generate-all-descriptions', async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
-
 
 app.post('/api/song-feedback', async (req, res) => {
   try {
