@@ -25,7 +25,6 @@ const vertexAI = new VertexAI({
 //  location: 'europe-west1',
     location: 'us-central1',  // ✅ CHANGE JUSTE CETTE LIGNE (au lieu de europe-west1)    ok=h year
 });
-//const API_KEY = 'AIzaSyB70H37z9n1qY9YV0zUUjGcN_uVD-0L1ZY';
 
 // Fonction pour générer description VERTEX
 //const API_KEY = '';  // ✅ COLLE LA CLÉ
@@ -351,7 +350,8 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
 //NEW  FIX VERTEX 
 async function generateSongDescription(songName) {
   try {
-    const model = vertexAI.getGenerativeModel({ model: 'gemini-pro' });
+    // const model = vertexAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = vertexAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
     const response = await model.generateContent({
       contents: [{
         parts: [{
