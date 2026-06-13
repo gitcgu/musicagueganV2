@@ -347,6 +347,9 @@ app.get('/api/file/audio/mix/:name', async (req, res) => {
   file.createReadStream({ start, end }).pipe(res);
 });
 
+// ⚙️ CONFIG - Change facilement!
+const GEMINI_ENABLED = false;  // ← Mets à true/false pour activer/désactiver
+
 //NEW  FIX VERTEX 
 async function generateSongDescription(songName) {
   try {
@@ -359,6 +362,13 @@ async function generateSongDescription(songName) {
       console.log('✅ Description du cache');
       return doc.data().text;
     }
+
+    // 1bis . Si Gemini désactivé
+    if (!GEMINI_ENABLED) {
+      console.log('⚠️ Gemini désactivé');
+      return 'Description indisponible (Gemini désactivé)';
+    }
+    
     // 2. Si pas en cache, générer avec Gemini
     const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
     const response = await model.generateContent({
