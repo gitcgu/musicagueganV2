@@ -4,7 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const { Storage } = require('@google-cloud/storage');
 const { Firestore, FieldValue } = require('@google-cloud/firestore');
-const fetch = require('node-fetch'); // Ensure you have this installed: npm install node-fetch
+const fetch = require('node-fetch'); // Assurez-vous que node-fetch est installé: npm install node-fetch
 
 const storage = new Storage();
 const db = new Firestore({ databaseId: 'music-db' });
@@ -14,86 +14,88 @@ const PORT = process.env.PORT || 8080;
 
 const MP3_BUCKET_NAME = 'musica-mp3-bucket';
 const MIX_BUCKET_NAME = 'musica-mix-bucket';
-const WAVE_FOLDER = 'waveforms/';
-const POCHETTE_FILENAME = 'pochettes/pochette.jpg'; // Default pochette
+const WAVE_FOLDER = 'waveforms/'; // Dossier où sont stockés les JSON de waveforms
+const POCHETTE_FILENAME = 'pochettes/pochette.jpg'; // Nom du fichier de pochette par défaut
 
 const POCHETTE_FOLDER = 'pochettes/';
 const DEFAULT_POCHETTE_URL = `https://storage.googleapis.com/${MP3_BUCKET_NAME}/${POCHETTE_FILENAME}`;
 
-// Vertex AI setup
+// Configuration Vertex AI pour Gemini
 const { VertexAI } = require('@google-cloud/vertexai');
 const vertexAI = new VertexAI({
-  project: '836359398199',
-  location: 'europe-west1', // Or 'us-central1'
+  project: '836359398199',  // Remplacez par votre project ID GCP
+  location: 'europe-west1', // Ou 'us-central1' selon votre préférence
 });
 
-const API_KEY = process.env.VERTEX_KEY; // Ensure this env var is set
+// Clé API pour Vertex AI (si nécessaire pour votre configuration)
+const API_KEY = process.env.VERTEX_KEY; 
 
-// Middleware
+// --- Middlewares ---
 app.use(cors({
-  origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], // Adjust if needed
+  origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], // Adaptez si nécessaire
   credentials: true,
 }));
 app.use(express.json());
 app.use(session({
-  secret: 'musica-secret-2025', // Make this a strong, unique secret
+  secret: 'musica-secret-2025', // Changez ceci pour une chaîne complexe et unique
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // 24 hours
+  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // 24 heures
 }));
 
+// Servir les fichiers statiques du frontend
 const FRONTEND_DIR = path.join(__dirname, 'frontend');
 app.use(express.static(FRONTEND_DIR));
-app.get('/favicon.ico', (req, res) => res.status(204).send());
+app.get('/favicon.ico', (req, res) => res.status(204).send()); // Ignorer la requête favicon
 
-// Caching for file lists
+// --- Caching pour les listes de fichiers ---
 const caches = {
   [MP3_BUCKET_NAME]: { files: null, loadedAt: 0 },
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
 };
 
-// Function to get all files from a bucket (general purpose)
+// Fonction utilitaire pour récupérer tous les fichiers d'un bucket
 async function getAllFiles(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
-  // Cache for 10 minutes
+  // Utiliser le cache s'il a moins de 10 minutes
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
-  const fileNames = files.map(f => f.name);
-  caches[bucketName] = { files: fileNames, loadedAt: now };
+  const fileNames = files.map(f => f.name); // Récupère tous les noms de fichiers
+  caches[bucketName] = { files: fileNames, loadedAt: now }; // Stocke dans le cache
   return fileNames;
 }
 
-// Function to get only MP3 files from a bucket
+// Fonction utilitaire pour récupérer UNIQUEMENT les fichiers MP3 d'un bucket
 async function getMp3Files(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
-  // Cache for 10 minutes
+  // Utiliser le cache s'il a moins de 10 minutes
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
-  const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3')); // Ensure it's an MP3
+  const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3')); // Filtre pour les .mp3
   caches[bucketName] = { files: fileNames, loadedAt: now };
   return fileNames;
 }
 
-// Get song statistics (likes/dislikes) from Firestore
+// Récupérer les statistiques (likes/dislikes) d'une chanson depuis Firestore
 async function getSongStats(songName) {
   try {
     const doc = await db.collection('song_stats').doc(songName).get();
     if (!doc.exists) return { likeCount: 0, dislikeCount: 0 };
     return doc.data();
   } catch (e) {
-    console.error(`Error fetching song stats for ${songName}:`, e);
+    console.error(`Erreur lors de la récupération des stats pour ${songName}:`, e);
     return { likeCount: 0, dislikeCount: 0 };
   }
 }
 
-// Get image URL for a song, checking for specific or default pochette
+// Obtenir l'URL de l'image de pochette (spécifique ou par défaut)
 async function getImageUrl(songFileName, bucketName) {
   try {
-    // Check for a specific pochette (e.g., pochettes/songFileName.jpg)
+    // Tente de trouver une pochette spécifique basée sur le nom du fichier audio
     const specificPochettePath = `${POCHETTE_FOLDER}${songFileName.replace('.mp3', '.jpg')}`;
     const specificPochetteFile = storage.bucket(bucketName).file(specificPochettePath);
     const [exists] = await specificPochetteFile.exists();
@@ -101,75 +103,76 @@ async function getImageUrl(songFileName, bucketName) {
     if (exists) {
       return `https://storage.googleapis.com/${bucketName}/${specificPochettePath}`;
     } else {
-      // Fallback to default pochette
+      // Sinon, retourne l'URL de la pochette par défaut
       return DEFAULT_POCHETTE_URL;
     }
   } catch (error) {
-    console.error(`Error finding pochette for ${songFileName}:`, error);
-    return DEFAULT_POCHETTE_URL; // Return default on error
+    console.error(`Erreur lors de la recherche de la pochette pour ${songFileName}:`, error);
+    return DEFAULT_POCHETTE_URL; // Retourne par défaut en cas d'erreur
   }
 }
 
-// Get country from IP address
+// Obtenir le pays associé à une adresse IP
 async function getCountryFromIP(ip) {
   try {
-    // Use node-fetch
+    // Assurez-vous que node-fetch est installé
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=country`);
     const data = await res.json();
     return data.country || 'Unknown';
   } catch (e) {
-    console.error("Error fetching country from IP:", e);
+    console.error("Erreur lors de la récupération du pays par IP:", e);
     return 'Unknown';
   }
 }
 
-// --- ROUTE FOR SERVING FILES (AUDIO & WAVEFORM JSON) ---
+// --- ROUTE POUR SERVIR LES FICHIERS (AUDIO ET WAVEFORM JSON) ---
+// Gère la récupération des fichiers depuis Cloud Storage, y compris le streaming audio.
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
     const { type, bucketType, fileName } = req.params;
-    // ✅ CORRECTED: Determine primary and secondary buckets based on bucketType
+    // Détermine le bucket principal et secondaire en fonction du type (mix ou mp3)
     const primaryBucket = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-    const secondaryBucket = bucketType === 'mix' ? MP3_BUCKET_NAME : MIX_BUCKET_NAME; // Fallback bucket
-    const targetName = decodeURIComponent(fileName);
+    const secondaryBucket = bucketType === 'mix' ? MP3_BUCKET_NAME : MIX_BUCKET_NAME; // Bucket de secours
+    const targetName = decodeURIComponent(fileName); // Décode le nom de fichier de l'URL
 
     let file;
     let contentType;
-    let filePathInBucket; // Path relative to bucket root
+    let filePathInBucket; // Chemin relatif dans le bucket
 
     if (type === 'audio') {
-      filePathInBucket = targetName; // For audio, it's the direct filename (e.g., 'song.mp3')
+      filePathInBucket = targetName; // Pour l'audio, c'est le nom de fichier direct (ex: 'song.mp3')
       contentType = 'audio/mpeg';
     } else if (type === 'waveform') {
-      // For waveform, construct path: waveforms/songName.json
-      // Assumes targetName passed is the original MP3 filename (e.g., 'song.mp3')
+      // Pour la waveform, cherche le fichier .json dans le dossier WAVE_FOLDER
+      // On suppose que targetName passé est le nom du fichier MP3 (ex: 'song.mp3')
       filePathInBucket = WAVE_FOLDER + targetName.replace('.mp3', '.json');
       contentType = 'application/json';
     } else {
-      return res.status(400).json({ error: 'Invalid file type. Use "audio" or "waveform".' });
+      return res.status(400).json({ error: 'Type de fichier invalide. Utilisez "audio" ou "waveform".' });
     }
 
-    // Attempt to find the file in the primary bucket
+    // Essaie de trouver le fichier dans le bucket primaire
     file = storage.bucket(primaryBucket).file(filePathInBucket);
     let [exists] = await file.exists();
 
-    // If not found, try the secondary bucket
+    // Si non trouvé, essaie dans le bucket secondaire
     if (!exists) {
       file = storage.bucket(secondaryBucket).file(filePathInBucket);
       [exists] = await file.exists();
     }
 
-    // If file still not found in either bucket
+    // Si le fichier n'est trouvé dans aucun bucket
     if (!exists) {
-      return res.status(404).json({ error: 'File not found.' });
+      return res.status(404).json({ error: 'Fichier non trouvé.' });
     }
 
-    // Handle Range requests for audio streaming
+    // Gère les requêtes Range pour le streaming audio
     if (type === 'audio') {
       const [metadata] = await file.getMetadata();
       const fileSize = metadata.size;
-      const range = req.headers.range;
+      const range = req.headers.range; // Entête Range (pour le streaming)
 
-      if (range) { // Handle partial content request (streaming)
+      if (range) { // Si requête de type Range (streaming partiel)
         const parts = range.replace(/bytes=/, '').split('-');
         const start = parseInt(parts[0], 10);
         const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
@@ -180,77 +183,78 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
           'Accept-Ranges': 'bytes',
           'Content-Length': chunkSize,
           'Content-Type': contentType,
-          'Access-Control-Allow-Origin': '*', // Allow frontend to fetch
+          'Access-Control-Allow-Origin': '*', // Autoriser l'accès depuis le frontend
         });
+        // Pipe le flux de lecture du fichier vers la réponse
         file.createReadStream({ start, end }).pipe(res);
-      } else { // Handle full file request
+      } else { // Requête complète (sans Range)
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Access-Control-Allow-Origin', '*'); // Allow frontend to fetch
-        res.setHeader('Accept-Ranges', 'bytes');
+        res.setHeader('Access-Control-Allow-Origin', '*'); // Autoriser l'accès depuis le frontend
+        res.setHeader('Accept-Ranges', 'bytes'); // Indiquer qu'on supporte les requêtes Range
         res.setHeader('Content-Length', fileSize);
         file.createReadStream().pipe(res);
       }
-    } else { // Handle waveform JSON file
-      const [content] = await file.download();
+    } else { // Pour les fichiers waveform (JSON)
+      const [content] = await file.download(); // Télécharge le contenu JSON
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Access-Control-Allow-Origin', '*'); // Allow frontend to fetch
+      res.setHeader('Access-Control-Allow-Origin', '*'); // Autoriser l'accès depuis le frontend
       res.send(content);
     }
   } catch (e) {
-    console.error('Error in /api/file route:', e);
-    res.status(500).json({ error: 'Server error retrieving file.' });
+    console.error('Erreur dans la route /api/file/:type/:bucketType/:fileName:', e);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération du fichier.' });
   }
 });
 
-// Endpoint to get the next song (MP3 or Mix)
+// --- Route pour obtenir la prochaine chanson (MP3 ou Mix) ---
 app.get('/api/next-song', async (req, res) => {
   try {
-    const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
-    // ✅ CORRECTED: Determine bucketName based on mode
+    const mode = req.query.mode === 'mix' ? 'mix' : 'mp3'; // Détermine le mode (mix ou mp3)
+    // ✅ CORRECTED: Détermine le bucketName basé sur le mode
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
     
+    // Log l'IP et le pays pour suivi/débogage
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/next-song - IP: ${ip} - Pays: ${country} - Mode: ${mode}`);
 
-    // Initialize session history if not present
+    // Initialise l'historique des chansons jouées pour ce mode si nécessaire
     if (!req.session.playedSongs) req.session.playedSongs = {};
-    // ✅ CORRECTED: Initialize session array for the correct bucketName
     if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName] = [];
 
-    const allSongs = await getMp3Files(bucketName); // Use getMp3Files to ensure only MP3s are returned
+    const allSongs = await getMp3Files(bucketName); // Récupère uniquement les fichiers .mp3
     let played = req.session.playedSongs[bucketName];
-    let available = allSongs.filter(s => !played.includes(s));
+    let available = allSongs.filter(s => !played.includes(s)); // Chansons non encore jouées
 
-    // If all songs in the current bucket have been played, reset the list
+    // Si toutes les chansons ont été jouées, réinitialise la liste et reprend depuis le début
     if (available.length === 0) {
-      req.session.playedSongs[bucketName] = []; // Reset history for this bucket
-      available = allSongs; // Use all songs again
-      if (available.length === 0) return res.status(404).json({ error: `No songs found in ${bucketName}.` });
+      req.session.playedSongs[bucketName] = []; // Réinitialise l'historique pour ce bucket
+      available = allSongs; // Utilise toutes les chansons à nouveau
+      if (available.length === 0) return res.status(404).json({ error: `Aucune chanson trouvée dans ${bucketName}.` });
     }
 
-    // Select a random available song
+    // Sélectionne une chanson aléatoire parmi celles disponibles
     const song = available[Math.floor(Math.random() * available.length)];
-    req.session.playedSongs[bucketName].push(song); // Add to played list
+    req.session.playedSongs[bucketName].push(song); // Ajoute la chanson sélectionnée à l'historique
 
-    // Generate description using Vertex AI (if enabled)
+    // Génère la description avec Vertex AI (si activé)
     const description = await generateSongDescription(song);
 
-    // Fetch stats and image URL in parallel
+    // Récupère les stats et l'URL de l'image en parallèle
     const [stats, imageUrl] = await Promise.all([
       getSongStats(song),
-      getImageUrl(song, bucketName) // Pass the correct bucketName
+      getImageUrl(song, bucketName) // Passe le bon bucketName
     ]);
     
-    // Generate random colors (optional)
+    // Génère des couleurs aléatoires pour le fond (optionnel)
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
 
     res.json({
-      songName: song.replace('.mp3', ''), // Display name without extension
-      fileName: song, // Original filename for backend references
-      url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`, // Use API for audio
-      waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`, // API route for waveform JSON
+      songName: song.replace('.mp3', ''), // Nom pour affichage
+      fileName: song,                      // Nom de fichier original pour le backend
+      url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`, // URL audio via API
+      waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`, // URL JSON waveform via API
       imageUrl: imageUrl,
       description: description,
       color,
@@ -259,34 +263,34 @@ app.get('/api/next-song', async (req, res) => {
       dislikeCount: stats.dislikeCount || 0,
     });
   } catch (e) {
-    console.error('Error in /api/next-song:', e);
-    res.status(500).json({ error: 'Server error retrieving next song.' });
+    console.error('Erreur dans /api/next-song:', e);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération de la prochaine chanson.' });
   }
 });
 
-// Endpoint to get the previous song
+// --- Route pour obtenir la chanson précédente ---
 app.get('/api/previous-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
-    // ✅ CORRECTED: Determine bucketName based on mode
+    // ✅ CORRECTED: Détermine le bucketName basé sur le mode
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
 
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/previous-song - IP: ${ip} - Pays: ${country} - Mode: ${mode}`);
     
-    // Ensure playedSongs and history for this bucket exist
+    // Vérifie si l'historique des chansons jouées existe et est suffisant pour ce bucket
     if (!req.session.playedSongs || !req.session.playedSongs[bucketName] || req.session.playedSongs[bucketName].length < 2) {
-      return res.status(400).json({ error: 'No previous song available in history for this mode.' });
+      return res.status(400).json({ error: 'Pas de chanson précédente disponible dans l\'historique pour ce mode.' });
     }
 
-    // Remove current song, get previous
-    req.session.playedSongs[bucketName].pop(); // Remove the last played song
-    const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1]; // Get the new last song
+    // Retire la chanson courante de l'historique et récupère la précédente
+    req.session.playedSongs[bucketName].pop(); // Retire la dernière chanson jouée
+    const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1]; // Récupère la nouvelle dernière chanson
 
-    // Fetch stats and image URL for the previous song
+    // Récupère les stats et l'URL de l'image pour la chanson précédente
     const stats = await getSongStats(song);
-    const imageUrl = await getImageUrl(song, bucketName); // Use correct bucketName
+    const imageUrl = await getImageUrl(song, bucketName); // Utilise le bon bucketName
 
     res.json({
       songName: song.replace('.mp3', ''),
@@ -294,141 +298,143 @@ app.get('/api/previous-song', async (req, res) => {
       url: `/api/file/audio/${mode}/${encodeURIComponent(song)}`,
       waveformUrl: `/api/file/waveform/${mode}/${encodeURIComponent(song)}`,
       imageUrl: imageUrl,
-      color: '#000000', // Or get random colors like next-song
+      color: '#000000', // Ou génère des couleurs aléatoires comme dans next-song
       textColor: '#FFFFFF',
       likeCount: stats.likeCount || 0,
       dislikeCount: stats.dislikeCount || 0,
     });
   } catch (e) {
-    console.error('Error in /api/previous-song:', e);
-    res.status(500).json({ error: 'Server error retrieving previous song.' });
+    console.error('Erreur dans /api/previous-song:', e);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération de la chanson précédente.' });
   }
 });
 
-// Endpoint to list available mixes
+// --- Route pour lister les mixes disponibles ---
 app.get('/api/mix-list', async (req, res) => {
   try {
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/mix-list - IP: ${ip} - Pays: ${country}`);
 
-    // Fetch all .mp3 files from MIX_BUCKET_NAME
-    const mixes = await getMp3Files(MIX_BUCKET_NAME); // Use getMp3Files to ensure only MP3s
+    // Récupère tous les fichiers .mp3 du bucket des mixes
+    const mixes = await getMp3Files(MIX_BUCKET_NAME);
 
     const result = mixes.map(mix => ({
-      name: mix.replace('.mp3',''), // Display name without extension
-      fileName: mix,                 // Original filename
-      // ✅ MODIFIÉ : Use your backend API for audio streaming
+      name: mix.replace('.mp3',''), // Nom à afficher (sans extension)
+      fileName: mix,                 // Nom de fichier original
+      // ✅ MODIFIÉ : Utilise votre API backend pour le streaming audio
       url: `/api/file/audio/mix/${encodeURIComponent(mix)}`, 
-      // ✅ AJOUTÉ : URL for the waveform JSON file via backend API
+      // ✅ AJOUTÉ : URL pour le fichier JSON de waveform via API backend
       waveformJsonUrl: `/api/file/waveform/mix/${encodeURIComponent(mix.replace('.mp3', '.json'))}` 
     }));
 
     res.json(result);
 
   } catch (e) {
-    console.error('Error in /api/mix-list:', e);
-    res.status(500).json({ error: 'Server error retrieving mix list.' });
+    console.error('Erreur dans /api/mix-list:', e);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération de la liste des mixes.' });
   }
 });
 
-// REMOVED: This specific route is redundant as it's handled by the generic /api/file route.
+// SUPPRIMÉ : Cette route est redondante car gérée par la route générique /api/file.
 // app.get('/api/file/audio/mix/:name', async (req, res) => { ... });
 
-// --- Vertex AI & Description Generation ---
-const GEMINI_ENABLED = false; // Set to true to enable Gemini description generation
+// --- Fonctions liées à Vertex AI et à la génération de descriptions ---
+const GEMINI_ENABLED = false; // Mettez à true pour activer la génération de descriptions par Gemini
 
 async function generateSongDescription(songName) {
   try {
-    // 1. Check cache in Firestore
+    // 1. Vérifie le cache dans Firestore
     const doc = await db.collection('song_descriptions').doc(songName).get();
     if (doc.exists) {
-      console.log('✅ Description found in cache for:', songName);
+      console.log('✅ Description trouvée dans le cache pour:', songName);
       return doc.data().text;
     }
 
-    // 2. If Gemini is disabled, return a placeholder
+    // 2. Si Gemini est désactivé, retourne un message placeholder
     if (!GEMINI_ENABLED) {
-      console.log('⚠️ Gemini description generation is disabled.');
-      return 'Description unavailable (Gemini disabled)';
+      console.log('⚠️ La génération de descriptions par Gemini est désactivée.');
+      return 'Description indisponible (Gemini désactivé)';
     }
     
-    // 3. Generate description using Vertex AI (Gemini 2.5 Pro)
+    // 3. Génère la description avec Vertex AI (Gemini 2.5 Pro)
     const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
     const response = await model.generateContent({
       contents: [{
         role: 'user',
         parts: [{
+          // Prompt pour demander une description courte
           text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases.`
         }]
       }]
     });
     
-    // Extract text, handling potential API response structure variations
-    const text = response.response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed to generate description';
+    // Extrait le texte de la réponse, en gérant les variations potentielles de structure
+    const text = response.response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Échec de la génération de description';
 
-    // 4. Save to cache if generation was successful
-    if (text !== 'Failed to generate description') {
+    // 4. Sauvegarde dans le cache si la génération a réussi
+    if (text !== 'Échec de la génération de description') {
       await db.collection('song_descriptions').doc(songName).set({ text });
-      console.log('✅ Description generated and cached for:', songName);
+      console.log('✅ Description générée et mise en cache pour:', songName);
     } else {
-      console.error('Failed to generate description for:', songName);
+      console.error('Échec de la génération de description pour:', songName);
     }
 
     return text;
 
   } catch (e) {
-    console.error('❌ Error during Gemini description generation:', e.message);
-    return 'Description not available';
+    console.error('❌ Erreur lors de la génération de description par Gemini:', e.message);
+    return 'Description non disponible';
   }
 }
 
-// Optional: Route for batch description generation (use with caution, potentially costly)
+// Optionnel: Route pour générer toutes les descriptions en batch (à utiliser avec prudence)
 // app.get('/api/generate-all-descriptions', async (req, res) => { ... });
 
-// --- Feedback Endpoint ---
+// --- Route pour les feedbacks (Likes/Dislikes) ---
 app.post('/api/song-feedback', async (req, res) => {
   try {
     const { songName, feedback } = req.body;
-    if (!songName || !feedback) return res.status(400).json({ error: 'Missing data (songName, feedback)' });
+    if (!songName || !feedback) return res.status(400).json({ error: 'Données manquantes (songName, feedback)' });
 
-    // Initialize session votedSongs if it doesn't exist
+    // Initialise votedSongs dans la session si inexistant
     if (!req.session.votedSongs) req.session.votedSongs = {};
-    // Check if user already voted for this song in this session
-    if (req.session.votedSongs[songName]) return res.status(409).json({ error: 'Vote already recorded for this song.' });
+    // Vérifie si l'utilisateur a déjà voté pour cette chanson dans cette session
+    if (req.session.votedSongs[songName]) return res.status(409).json({ error: 'Vote déjà enregistré pour cette chanson.' });
 
     const statsRef = db.collection('song_stats').doc(songName);
     if (feedback === 'like') {
-      await statsRef.set({ likeCount: FieldValue.increment(1) }, { merge: true });
+      await statsRef.set({ likeCount: FieldValue.increment(1) }, { merge: true }); // Incrémente le like
     } else if (feedback === 'dislike') {
-      await statsRef.set({ dislikeCount: FieldValue.increment(1) }, { merge: true });
+      await statsRef.set({ dislikeCount: FieldValue.increment(1) }, { merge: true }); // Incrémente le dislike
     } else {
-      return res.status(400).json({ error: 'Invalid feedback type. Use "like" or "dislike".' });
+      return res.status(400).json({ error: 'Type de feedback invalide. Utilisez "like" ou "dislike".' });
     }
 
-    req.session.votedSongs[songName] = true; // Mark as voted in session
+    req.session.votedSongs[songName] = true; // Marque comme voté dans la session
 
-    // Fetch updated counts
+    // Récupère les comptes mis à jour
     const statsDoc = await statsRef.get();
-    const data = statsDoc.data() || { likeCount: 0, dislikeCount: 0 }; // Default if doc was just created
+    const data = statsDoc.data() || { likeCount: 0, dislikeCount: 0 }; // Défaut si le document vient d'être créé
     
     res.json({ success: true, likeCount: data.likeCount, dislikeCount: data.dislikeCount });
   } catch (e) {
-    console.error('Error in /api/song-feedback:', e);
-    res.status(500).json({ error: 'Server error recording feedback.' });
+    console.error('Erreur dans /api/song-feedback:', e);
+    res.status(500).json({ error: 'Erreur serveur lors de l\'enregistrement du feedback.' });
   }
 });
 
-// --- Health Check & Static File Serving ---
+// --- Point de contrôle de santé (Health Check) ---
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// Serve frontend index.html for the root path
+// --- Servir le fichier index.html pour la racine ---
 app.get('/', (req, res) => {
   res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
 });
 
+// --- Démarrage du serveur ---
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running at http://0.0.0.0:${PORT}`);
+  console.log(`Serveur Musica backend démarré sur http://0.0.0.0:${PORT}`);
 });
