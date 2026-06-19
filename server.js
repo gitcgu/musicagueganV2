@@ -30,7 +30,8 @@ const API_KEY = process.env.VERTEX_KEY; // Assurez-vous que cette variable d'env
 
 // --- Middlewares ---
 app.use(cors({
-  origin: ['https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], // Adaptez ces origines si nécessaire
+  // IMPORTANT: Adaptez ces origines pour correspondre à l'URL de votre frontend déployé/local
+  origin: ['http://localhost:8080', 'https://musica-backend-testing-836359398199.europe-west1.run.app', 'https://musicaguegan.netlify.app'], 
   credentials: true,
 }));
 app.use(express.json());
@@ -41,10 +42,9 @@ app.use(session({
   cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // Cookie valable 24h
 }));
 
-// Servir les fichiers statiques du frontend
-const FRONTEND_DIR = path.join(__dirname, 'frontend');
+const FRONTEND_DIR = path.join(__dirname, 'frontend'); // Assurez-vous que ce chemin est correct pour vos fichiers frontend
 app.use(express.static(FRONTEND_DIR));
-app.get('/favicon.ico', (req, res) => res.status(204).send()); // Ignorer les requêtes favicon
+app.get('/favicon.ico', (req, res) => res.status(204).send());
 
 // --- Caching pour les listes de fichiers ---
 const caches = {
@@ -52,20 +52,7 @@ const caches = {
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
 };
 
-// Fonction utilitaire pour récupérer tous les fichiers d'un bucket (général)
-async function getAllFiles(bucketName) {
-  const now = Date.now();
-  const cache = caches[bucketName];
-  // Utiliser le cache s'il a moins de 10 minutes
-  if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
-  
-  const [files] = await storage.bucket(bucketName).getFiles();
-  const fileNames = files.map(f => f.name); // Récupère tous les noms de fichiers
-  caches[bucketName] = { files: fileNames, loadedAt: now };
-  return fileNames;
-}
-
-// Fonction utilitaire pour récupérer UNIQUEMENT les fichiers MP3 d'un bucket
+// Fonction utilitaire pour récupérer tous les fichiers .mp3 d'un bucket
 async function getMp3Files(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
@@ -203,7 +190,7 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
 app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
-    // ✅ CORRECTED: Détermine le bucketName basé sur le mode
+    // --- FIX : Détermine le bucketName basé sur le mode ---
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
     
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -212,7 +199,7 @@ app.get('/api/next-song', async (req, res) => {
 
     // Initialise l'historique des chansons jouées pour ce mode si nécessaire
     if (!req.session.playedSongs) req.session.playedSongs = {};
-    // ✅ CORRECTED: Initialise l'array de session pour le bucketName correct
+    // --- FIX : Initialise l'array de session pour le bucketName correct ---
     if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName] = [];
 
     const allSongs = await getMp3Files(bucketName); // Récupère uniquement les fichiers .mp3
@@ -265,7 +252,7 @@ app.get('/api/next-song', async (req, res) => {
 app.get('/api/previous-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
-    // ✅ CORRECTED: Détermine le bucketName basé sur le mode
+    // --- FIX : Détermine le bucketName basé sur le mode ---
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
 
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -315,9 +302,9 @@ app.get('/api/mix-list', async (req, res) => {
     const result = mixes.map(mix => ({
       name: mix.replace('.mp3',''), // Nom à afficher (sans extension)
       fileName: mix,                 // Nom de fichier original
-      // ✅ MODIFIÉ : Utilise votre API backend pour le streaming audio
+      // --- FIX : Utilise votre API backend pour le streaming audio ---
       url: `/api/file/audio/mix/${encodeURIComponent(mix)}`, 
-      // ✅ AJOUTÉ : URL pour le fichier JSON de waveform via API backend
+      // --- FIX : Ajoute l'URL pour le fichier JSON de waveform via API backend ---
       waveformJsonUrl: `/api/file/waveform/mix/${encodeURIComponent(mix.replace('.mp3', '.json'))}` 
     }));
 
