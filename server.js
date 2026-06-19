@@ -29,8 +29,9 @@ const vertexAI = new VertexAI({
 const API_KEY = process.env.VERTEX_KEY; // Assurez-vous que cette variable d'environnement est définie
 
 // --- Middlewares ---
+// IMPORTANT: Adaptez les origines CORS à votre environnement de déploiement/développement
 app.use(cors({
-  origin: ['http://localhost:8080', 'https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], // Adaptez si nécessaire
+  origin: ['http://localhost:8080', 'https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], 
   credentials: true,
 }));
 app.use(express.json());
@@ -38,12 +39,12 @@ app.use(session({
   secret: 'musica-secret-2025', // IMPORTANT: Utilisez une clé secrète forte et unique !
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // 24 heures
+  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // Cookie valable 24h
 }));
 
 const FRONTEND_DIR = path.join(__dirname, 'frontend'); // Assurez-vous que ce chemin est correct pour vos fichiers frontend
 app.use(express.static(FRONTEND_DIR));
-app.get('/favicon.ico', (req, res) => res.status(204).send());
+app.get('/favicon.ico', (req, res) => res.status(204).send()); // Ignorer les requêtes favicon
 
 // --- Caching pour les listes de fichiers ---
 const caches = {
@@ -55,6 +56,7 @@ const caches = {
 async function getAllFiles(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
+  // Utiliser le cache s'il a moins de 10 minutes
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
@@ -67,10 +69,11 @@ async function getAllFiles(bucketName) {
 async function getMp3Files(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
+  // Utiliser le cache s'il a moins de 10 minutes
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
-  const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3'));
+  const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3')); // Filtre pour les .mp3
   caches[bucketName] = { files: fileNames, loadedAt: now };
   return fileNames;
 }
