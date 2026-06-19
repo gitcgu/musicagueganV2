@@ -30,8 +30,7 @@ const API_KEY = process.env.VERTEX_KEY; // Assurez-vous que cette variable d'env
 
 // --- Middlewares ---
 app.use(cors({
-  // IMPORTANT: Adaptez ces origines pour correspondre à l'URL de votre frontend déployé/local
-  origin: ['http://localhost:8080', 'https://musica-backend-testing-836359398199.europe-west1.run.app', 'https://musicaguegan.netlify.app'], 
+  origin: ['http://localhost:8080', 'https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], // Adaptez si nécessaire
   credentials: true,
 }));
 app.use(express.json());
@@ -39,7 +38,7 @@ app.use(session({
   secret: 'musica-secret-2025', // IMPORTANT: Utilisez une clé secrète forte et unique !
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // Cookie valable 24h
+  cookie: { secure: 'auto', httpOnly: true, maxAge: 86400000 }, // 24 heures
 }));
 
 const FRONTEND_DIR = path.join(__dirname, 'frontend'); // Assurez-vous que ce chemin est correct pour vos fichiers frontend
@@ -52,15 +51,26 @@ const caches = {
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
 };
 
-// Fonction utilitaire pour récupérer tous les fichiers .mp3 d'un bucket
-async function getMp3Files(bucketName) {
+// Fonction utilitaire pour récupérer tous les fichiers d'un bucket (général)
+async function getAllFiles(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
-  // Utiliser le cache s'il a moins de 10 minutes
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
-  const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3')); // Filtre pour les .mp3
+  const fileNames = files.map(f => f.name);
+  caches[bucketName] = { files: fileNames, loadedAt: now };
+  return fileNames;
+}
+
+// Fonction utilitaire pour récupérer UNIQUEMENT les fichiers MP3 d'un bucket
+async function getMp3Files(bucketName) {
+  const now = Date.now();
+  const cache = caches[bucketName];
+  if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
+  
+  const [files] = await storage.bucket(bucketName).getFiles();
+  const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3'));
   caches[bucketName] = { files: fileNames, loadedAt: now };
   return fileNames;
 }
