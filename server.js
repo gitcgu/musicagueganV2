@@ -98,7 +98,8 @@ app.get('/api/waveform/:bucketType/:fileName', async (req, res) => {
   try {
     const { bucketType, fileName } = req.params;
     const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-    const cleanFileName = decodeURIComponent(fileName).replace('.mp3', '.json');
+    // const cleanFileName = decodeURIComponent(fileName).replace('.mp3', '.json');
+    const cleanFileName = decodeURIComponent(fileName) + '.json';
     const filePathInBucket = WAVE_FOLDER + cleanFileName;
 
     res.setHeader('Access-Control-Allow-Origin', '*');
