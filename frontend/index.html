@@ -194,7 +194,7 @@
         {{ songDescription }}
       </p>
       
-      <!-- Bloc MP3 avec waveform -->
+      <!-- Bloc MP3 -->
       <div v-if="mode === 'mp3'" class="waveform-wrapper">
         <!-- Image album -->
         <div class="album-image"
@@ -367,7 +367,7 @@ createApp({
     document.removeEventListener('keydown', this.handleUserInteraction);
   },
 
-  methods: {
+  methods: { // <<< TOUTES LES MÉTHODES DOIVENT ÊTRE DÉFINIES ICI >>>
     // --- Gestion de l'interaction utilisateur (pour autoplay) ---
     handleUserInteraction() {
       if (!this.userInteracted) {
@@ -428,7 +428,7 @@ createApp({
       if (this.isLoading) return;
       this.resetPlayerState(true); // Réinitialiser pour un nouveau MP3
 
-      axios.get(`/api/next-song?mode=mp3`, { withCredentials: true }) // Charger un MP3
+      axios.get(`/api/next-song?mode=mp3`, { withCredentials: true })
         .then((res) => {
           const data = res.data;
           this.updateSongHistory(data.songName);
@@ -440,7 +440,7 @@ createApp({
           this.imageUrl = data.imageUrl || '';
           this.songDescription = data.description || '';
 
-          this.wavesurfer.un('ready'); // Nettoyer l'ancien listener
+          this.wavesurfer.un('ready');
           this.wavesurfer.once('ready', () => {
             this.isSongReady = true;
             this.duration = this.formatTime(this.wavesurfer.getDuration());
@@ -449,7 +449,7 @@ createApp({
               setTimeout(() => this.playAudio(), 100);
             }
           });
-          this.wavesurfer.load(this.songUrl); // Charger l'audio MP3
+          this.wavesurfer.load(this.songUrl);
         })
         .catch((e) => {
           console.error('❌ Erreur loadNextSong:', e);
@@ -460,7 +460,7 @@ createApp({
       if (this.isLoading) return;
       this.resetPlayerState(true); // Réinitialiser pour un nouveau MP3
 
-      axios.get(`/api/previous-song?mode=mp3`, { withCredentials: true }) // Charger un MP3
+      axios.get(`/api/previous-song?mode=mp3`, { withCredentials: true })
         .then((res) => {
           const data = res.data;
           this.updateSongHistory(data.songName);
@@ -480,7 +480,7 @@ createApp({
               setTimeout(() => this.playAudio(), 100);
             }
           });
-          this.wavesurfer.load(this.songUrl); // Charger l'audio MP3
+          this.wavesurfer.load(this.songUrl);
         })
         .catch((e) => {
           console.error('❌ Erreur loadPreviousSong:', e);
@@ -511,13 +511,11 @@ createApp({
     // Récupère la liste des mixes depuis le backend
     async fetchMixList() {
       try {
-        // Assurez-vous que l'appel Axios se fait avec withCredentials: true
         const res = await axios.get('/api/mix-list', { withCredentials: true });
         this.mixList = res.data;
         console.log('Mix List received:', this.mixList); // <-- LOG DEBOGAGE IMPORTANT
         
         // Initialiser les instances WaveSurfer pour chaque mix UNIQUEMENT si le mode est MIX
-        // et que la liste est prête. Cela crée les conteneurs mais ne charge pas l'audio/waveform encore.
         if (this.mode === 'mix' && this.mixList.length > 0) {
            this.mixList.forEach(mix => this.initMixWaveformContainer(mix));
         }
@@ -543,12 +541,12 @@ createApp({
         try {
             const ws = WaveSurfer.create({
                 container: `#${waveformId}`, // Le conteneur HTML pour la waveform
-                waveColor: '#ffffff',       // Couleur des barres de la waveform
-                progressColor: '#ff0000',   // Couleur de progression pendant la lecture
-                barWidth: 3,                // Largeur des barres
-                barGap: 1,                  // Espacement entre les barres
-                barRadius: 0,               // Coins carrés
-                height: 40,                 // Hauteur de la waveform
+                waveColor: '#ffffff',       
+                progressColor: '#ff0000',   
+                barWidth: 3,                
+                barGap: 1,                  
+                barRadius: 0,               
+                height: 40,                 
                 responsive: true,
                 cursorWidth: 2,
                 cursorColor: '#fff',
@@ -561,18 +559,18 @@ createApp({
             this.mixInfoCache[mix.fileName] = { 
               url: mix.url, // URL audio du mix
               waveformJsonUrl: mix.waveformJsonUrl, // URL JSON waveform
-              duration: 0 // Durée sera mise à jour
+              duration: 0 
             };
             console.log(`WaveSurfer container initialized for: ${mix.fileName}`);
 
             // Événements pour cette instance WaveSurfer du mix
-            ws.on('ready', (duration) => { // Quand la waveform JSON est chargée et prête
+            ws.on('ready', (duration) => { // Quand la waveform JSON est prête
                 console.log(`Waveform ready for ${mix.fileName}, duration: ${duration}`);
                 if (this.currentMix === mix.fileName) { // Si c'est le mix actif
-                    this.mixDuration = duration; // Met à jour la durée affichée
+                    this.mixDuration = duration;
                 }
                 if (duration && duration > 0) {
-                    this.mixInfoCache[mix.fileName].duration = duration; // Stocke la durée
+                    this.mixInfoCache[mix.fileName].duration = duration;
                 }
             });
             ws.on('play', () => { // Quand la visualisation commence
@@ -612,14 +610,12 @@ createApp({
     // Gère le clic sur la waveform pour chercher la position de lecture
     seekMix(mix, event) {
         const ws = this.mixWaveSurfers[mix.fileName];
-        // Ne fait rien si ce n'est pas le mix actif ou s'il n'y a pas de waveform
         if (!ws || this.currentMix !== mix.fileName) return; 
 
         const waveWrapper = event.currentTarget; 
         const clickX = event.offsetX;
         const waveWidth = waveWrapper.offsetWidth;
 
-        // Utilise la durée disponible (audio tag ou WaveSurfer)
         const duration = this.mixPlayer.duration || ws.getDuration() || 0; 
         if (duration === 0 || !isFinite(duration)) {
             console.warn("Durée non disponible pour le seek sur le mix:", mix.fileName);
@@ -643,18 +639,16 @@ createApp({
     toggleMixPlayPause(mix) {
         const ws = this.mixWaveSurfers[mix.fileName];
         if (!ws) {
-            console.error(`WaveSurfer instance not found for mix: ${mix.fileName}`); // Erreur clé
+            console.error(`WaveSurfer instance not found for mix: ${mix.fileName}`);
             return;
         }
 
-        // Si c'est le mix courant et qu'il est en lecture, on le met en pause
         if (this.currentMix === mix.fileName && this.isMixPlaying) {
             this.mixPlayer.pause();
             ws.pause(); // Pause visualisation
             this.isMixPlaying = false;
         } else {
-            // Sinon, on démarre/reprend ce mix
-            this.currentMix = mix.fileName; // Définit ce mix comme actif
+            this.currentMix = mix.fileName; 
             
             // Met en pause le lecteur MP3 s'il était lancé
             if (this.wavesurfer && !this.wavesurfer.isPaused()) {
@@ -668,11 +662,10 @@ createApp({
                 console.error("Informations du mix (URL) non trouvées:", mix.fileName);
                 return;
             }
-            this.mixPlayer.src = mixInfo.url; // Définit la source audio
+            this.mixPlayer.src = mixInfo.url;
             this.mixPlayer.play().then(() => {
                 this.isMixPlaying = true;
                 this.mixCurrentTime = this.mixPlayer.currentTime;
-                // Met à jour la durée si elle n'est pas encore connue ou invalide
                 if (this.mixDuration === 0 || this.mixDuration === Infinity || isNaN(this.mixDuration)) {
                     this.mixDuration = this.mixPlayer.duration;
                 }
@@ -680,8 +673,8 @@ createApp({
 
                 // --- CHARGEMENT DE LA WAVEFORM JSON pour visualisation ---
                 if (mixInfo.waveformJsonUrl) {
-                   ws.load(mixInfo.waveformJsonUrl); // Charge le JSON de la waveform
-                   ws.on('ready', (duration) => { // L'événement 'ready' de ws peut fournir la durée
+                   ws.load(mixInfo.waveformJsonUrl); 
+                   ws.on('ready', (duration) => { 
                        if (duration && duration > 0) {
                            this.mixDuration = duration;
                            console.log(`Waveform JSON ready for ${mix.fileName} with duration: ${duration}`);
@@ -692,16 +685,15 @@ createApp({
                 }
             }).catch(e => {
                 console.error("Erreur lors de la lecture du mix audio:", e);
-                this.isMixPlaying = false; // Marquer comme non joué en cas d'erreur
+                this.isMixPlaying = false; 
             });
         }
     },
 
     // Gère le changement de mode (MP3 <-> MIX)
     async toggleMode() {
-      this.isLoading = true; // Indique un chargement
+      this.isLoading = true; 
 
-      // Arrête la lecture actuelle avant de changer de mode
       if (this.mode === 'mp3' && this.isPlaying) this.pauseAudio();
       else if (this.mode === 'mix' && this.isMixPlaying) {
         if (this.mixPlayer) this.mixPlayer.pause();
@@ -713,14 +705,11 @@ createApp({
         this.currentMix = null;
       }
       
-      // Bascule le mode
       this.mode = this.mode === 'mp3' ? 'mix' : 'mp3';
 
       if (this.mode === 'mp3') {
-        // Passage en mode MP3: recharger les infos d'un MP3
-        await this.$nextTick(); // Attend que le DOM soit mis à jour
+        await this.$nextTick(); 
         try {
-          // Charge les détails du prochain MP3
           const res = await axios.get(`/api/next-song?mode=mp3`, { withCredentials: true });
           const data = res.data;
           
@@ -732,10 +721,9 @@ createApp({
           this.globalLikeCount = data.likeCount || 0;
           this.globalDislikeCount = data.dislikeCount || 0;
 
-          // Recrée l'instance WaveSurfer pour le MP3
           if (this.wavesurfer) this.wavesurfer.destroy();
           this.wavesurfer = WaveSurfer.create({
-            container: '#waveform', // Le div de la waveform MP3
+            container: '#waveform', 
             waveColor: '#FFFFFF',
             progressColor: 'transparent',
             barWidth: 2,
@@ -746,26 +734,23 @@ createApp({
             hideScrollbar: true,
           });
           
-          // Ré-attache les listeners d'événements pour la waveform MP3
           this.wavesurfer.on('audioprocess', () => { /* ... */ });
           this.wavesurfer.on('finish', () => { /* ... */ });
           this.wavesurfer.once('ready', () => { /* ... */ });
           
-          this.wavesurfer.load(this.songUrl); // Charge l'audio MP3
+          this.wavesurfer.load(this.songUrl);
 
         } catch (e) {
           console.error('Erreur lors du basculement vers le mode MP3:', e);
         } finally {
-          this.isLoading = false; // Fin du chargement
+          this.isLoading = false; 
         }
       } else {
-        // Passage en mode MIX
-        await this.$nextTick(); // Attend que le DOM soit mis à jour
-        // Assure que la liste des mixes est chargée et les waveforms initialisées
-        if (this.mixList.length === 0) { // Si la liste n'a pas été chargée au montage
+        await this.$nextTick(); 
+        if (this.mixList.length === 0) { 
           await this.fetchMixList();
         }
-        this.isLoading = false; // Fin du chargement
+        this.isLoading = false; 
       }
     },
 
@@ -787,7 +772,7 @@ createApp({
       await this.sendFeedback('dislike');
     },
     async sendFeedback(feedbackType) {
-      if (this.mode === 'mp3' && this.fileName) { // Feedback uniquement pour MP3
+      if (this.mode === 'mp3' && this.fileName) { 
         try {
           this.hasVoted = true;
           const res = await axios.post('/api/song-feedback', { songName: this.fileName, feedback: feedbackType }, { withCredentials: true });
@@ -795,7 +780,7 @@ createApp({
           this.globalDislikeCount = res.data.dislikeCount || 0;
         } catch (err) {
           console.error(`❌ Feedback ${feedbackType} error:`, err);
-          this.hasVoted = false; // Permet de réessayer si erreur
+          this.hasVoted = false; 
         }
       }
     },
