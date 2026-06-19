@@ -316,7 +316,6 @@ app.get('/api/waveform/:bucketType/:fileName', async (req, res) => {
   }
 });
 
-// --- Route pour lister les mixes disponibles ---
 app.get('/api/mix-list', async (req, res) => {
   try {
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
@@ -325,18 +324,17 @@ app.get('/api/mix-list', async (req, res) => {
 
     const mixes = await getMp3Files(MIX_BUCKET_NAME);
 
-const result = mixes.map(mix => ({
-  name: mix.replace('.mp3',''),
-  fileName: mix,
-  url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-  // ✅ FIX : Utilise ta nouvelle route backend
-  waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
-}));
-    res.json(result);
+    const result = mixes.map(mix => ({
+      name: mix.replace('.mp3',''),
+      fileName: mix,
+      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
+      waveformJsonUrl: `https://storage.googleapis.com/${MIX_BUCKET_NAME}/waveforms/${mix.replace('.mp3', '.json')}`
+    }));
 
+    res.json(result);
   } catch (e) {
     console.error('Erreur dans /api/mix-list:', e);
-    res.status(500).json({ error: 'Erreur serveur lors de la récupération de la liste des mixes.' });
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
