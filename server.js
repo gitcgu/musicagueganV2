@@ -297,7 +297,8 @@ app.get('/api/mix-list', async (req, res) => {
       fileName: mix,
       url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
       // ✅ FIX : URLs correctes pour les waveforms
-      waveformJsonUrl: `/api/file/waveform/mix/${encodeURIComponent(mix)}`
+      //waveformJsonUrl: `/api/file/waveform/mix/${encodeURIComponent(mix)}`
+      waveformJsonUrl: `https://storage.googleapis.com/${MIX_BUCKET_NAME}/waveforms/${mix.replace('.mp3', '.json')}`
     }));
 
     res.json(result);
