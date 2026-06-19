@@ -532,23 +532,24 @@ createApp({
       });
     },
 
-    // Récupère la liste des mixes depuis le backend
     async fetchMixList() {
-      try {
-        const res = await axios.get('/api/mix-list', { withCredentials: true });
-        this.mixList = res.data;
-        console.log('✅ Mix List received:', this.mixList);
+  try {
+    const res = await axios.get('/api/mix-list', { withCredentials: true });
+    this.mixList = res.data.map(mix => ({
+      ...mix,
+      waveformJsonUrl: `https://storage.googleapis.com/musica-mix-bucket/waveforms/${mix.fileName.replace('.mp3', '')}.json`
+    }));
+    console.log('✅ Mix List received:', this.mixList);
 
-        // Initialiser WaveSurfer pour les mixes APRÈS le rendu du DOM
-        if (this.mode === 'mix' && this.mixList.length > 0) {
-          this.$nextTick(() => {
-            this.mixList.forEach(mix => this.initMixWaveformContainer(mix));
-          });
-        }
-      } catch (err) {
-        console.error('❌ Erreur /api/mix-list:', err);
-      }
-    },
+    if (this.mode === 'mix' && this.mixList.length > 0) {
+      this.$nextTick(() => {
+        this.mixList.forEach(mix => this.initMixWaveformContainer(mix));
+      });
+    }
+  } catch (err) {
+    console.error('❌ Erreur /api/mix-list:', err);
+  }
+},
 
     // Initialise le conteneur WaveSurfer pour une waveform de mix
     initMixWaveformContainer(mix) {
