@@ -52,7 +52,7 @@ const caches = {
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
 };
 
-// Récupère tous les fichiers d'un bucket
+// Fonction utilitaire pour récupérer tous les fichiers d'un bucket (général)
 async function getAllFiles(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
@@ -60,15 +60,16 @@ async function getAllFiles(bucketName) {
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
-  const fileNames = files.map(f => f.name);
+  const fileNames = files.map(f => f.name); // Récupère tous les noms de fichiers
   caches[bucketName] = { files: fileNames, loadedAt: now };
   return fileNames;
 }
 
-// Récupère UNIQUEMENT les fichiers MP3 d'un bucket
+// Fonction utilitaire pour récupérer UNIQUEMENT les fichiers MP3 d'un bucket
 async function getMp3Files(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
+  // Utiliser le cache s'il a moins de 10 minutes
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
   
   const [files] = await storage.bucket(bucketName).getFiles();
@@ -77,7 +78,7 @@ async function getMp3Files(bucketName) {
   return fileNames;
 }
 
-// Récupère les statistiques (likes/dislikes) d'une chanson depuis Firestore
+// Récupérer les statistiques (likes/dislikes) d'une chanson depuis Firestore
 async function getSongStats(songName) {
   try {
     const doc = await db.collection('song_stats').doc(songName).get();
@@ -89,7 +90,7 @@ async function getSongStats(songName) {
   }
 }
 
-// Obtient l'URL de l'image de pochette (spécifique ou par défaut)
+// Obtenir l'URL de l'image de pochette (spécifique ou par défaut)
 async function getImageUrl(songFileName, bucketName) {
   try {
     const specificPochettePath = `${POCHETTE_FOLDER}${songFileName.replace('.mp3', '.jpg')}`;
@@ -103,11 +104,11 @@ async function getImageUrl(songFileName, bucketName) {
     }
   } catch (error) {
     console.error(`Erreur lors de la recherche de la pochette pour ${songFileName}:`, error);
-    return DEFAULT_POCHETTE_URL;
+    return DEFAULT_POCHETTE_URL; // Retourne par défaut en cas d'erreur
   }
 }
 
-// Obtient le pays associé à une adresse IP
+// Obtenir le pays associé à une adresse IP
 async function getCountryFromIP(ip) {
   try {
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=country`);
