@@ -29,9 +29,8 @@ const vertexAI = new VertexAI({
 const API_KEY = process.env.VERTEX_KEY; // Assurez-vous que cette variable d'environnement est définie
 
 // --- Middlewares ---
-// IMPORTANT: Adaptez les origines CORS à votre environnement de déploiement/développement
 app.use(cors({
-  origin: ['http://localhost:8080', 'https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], 
+  origin: ['http://localhost:8080', 'https://musicabackend.uc.r.appspot.com', 'https://musicaguegan.netlify.app'], // Adaptez ces origines si nécessaire
   credentials: true,
 }));
 app.use(express.json());
@@ -111,6 +110,7 @@ async function getImageUrl(songFileName, bucketName) {
 // Obtenir le pays associé à une adresse IP
 async function getCountryFromIP(ip) {
   try {
+    // Assurez-vous que node-fetch est installé
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=country`);
     const data = await res.json();
     return data.country || 'Unknown';
