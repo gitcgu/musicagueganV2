@@ -283,6 +283,39 @@ app.get('/api/previous-song', async (req, res) => {
   }
 });
 
+
+// --- Route pour servir les fichiers JSON waveform depuis GCS ---
+app.get('/api/waveform/:bucketType/:fileName', async (req, res) => {
+  try {
+    const { bucketType, fileName } = req.params;
+    const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
+    const targetName = decodeURIComponent(fileName);
+    const filePathInBucket = WAVE_FOLDER + targetName.replace('.mp3', '.json');
+
+    // ✅ CORS headers
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Content-Type', 'application/json');
+
+    const file = storage.bucket(bucketName).file(filePathInBucket);
+    const [exists] = await file.exists();
+
+    if (!exists) {
+      console.error(`❌ Fichier JSON non trouvé: ${filePathInBucket}`);
+      return res.status(404).json({ error: 'Fichier JSON non trouvé.' });
+    }
+
+    const [content] = await file.download();
+    res.setHeader('Content-Length', Buffer.byteLength(content));
+    res.send(content);
+    console.log(`✅ Waveform JSON served: ${filePathInBucket}`);
+
+  } catch (e) {
+    console.error('Erreur dans /api/waveform:', e);
+    res.status(500).json({ error: 'Erreur serveur lors de la récupération du fichier JSON.' });
+  }
+});
+
 // --- Route pour lister les mixes disponibles ---
 app.get('/api/mix-list', async (req, res) => {
   try {
@@ -292,15 +325,13 @@ app.get('/api/mix-list', async (req, res) => {
 
     const mixes = await getMp3Files(MIX_BUCKET_NAME);
 
-    const result = mixes.map(mix => ({
-      name: mix.replace('.mp3',''),
-      fileName: mix,
-      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-      // ✅ FIX : URLs correctes pour les waveforms
-      //waveformJsonUrl: `/api/file/waveform/mix/${encodeURIComponent(mix)}`
-      waveformJsonUrl: `https://storage.googleapis.com/${MIX_BUCKET_NAME}/waveforms/${mix.replace('.mp3', '.json')}`
-    }));
-
+const result = mixes.map(mix => ({
+  name: mix.replace('.mp3',''),
+  fileName: mix,
+  url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
+  // ✅ FIX : Utilise ta nouvelle route backend
+  waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
+}));
     res.json(result);
 
   } catch (e) {
