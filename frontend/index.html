@@ -305,37 +305,44 @@ createApp({
   },
   mounted() {
     // --- Initialisation WaveSurfer pour le mode MP3 ---
-    this.wavesurfer = WaveSurfer.create({
-      container: '#waveform', // Le div pour la waveform du MP3
-      waveColor: '#FFFFFF',
-      progressColor: 'transparent', // On utilise l'image de fond pour la progression visuelle
-      barWidth: 2,
-      height: 250,
-      responsive: true,
-      cursorWidth: 2,
-      cursorColor: '#fff',
-      hideScrollbar: true,
-    });
+    // On vérifie si le conteneur #waveform existe avant de créer WaveSurfer
+    const mp3WaveformContainer = document.getElementById('waveform');
+    if (mp3WaveformContainer) {
+      this.wavesurfer = WaveSurfer.create({
+        container: '#waveform', // Le div pour la waveform du MP3
+        waveColor: '#FFFFFF',
+        progressColor: 'transparent', // On utilise l'image de fond pour la progression visuelle
+        barWidth: 2,
+        height: 250,
+        responsive: true,
+        cursorWidth: 2,
+        cursorColor: '#fff',
+        hideScrollbar: true,
+      });
 
-    // Événements pour la waveform MP3
-    this.wavesurfer.on('audioprocess', () => {
-      if (this.isPlaying) {
-        this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-        const duration = this.wavesurfer.getDuration();
-        const currentTime = this.wavesurfer.getCurrentTime();
-        if (duration > 0) {
-          this.progressPercent = (currentTime / duration) * 100;
+      // Événements pour la waveform MP3
+      this.wavesurfer.on('audioprocess', () => {
+        if (this.isPlaying) {
+          this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+          const duration = this.wavesurfer.getDuration();
+          const currentTime = this.wavesurfer.getCurrentTime();
+          if (duration > 0) {
+            this.progressPercent = (currentTime / duration) * 100;
+          }
         }
-      }
-    });
-    this.wavesurfer.on('finish', () => {
-      this.isPlaying = false;
-      this.currentTime = this.duration;
-      this.progressPercent = 100;
-      if (this.mode === 'mp3') {
-        this.nextSong(); // Passer au MP3 suivant automatiquement
-      }
-    });
+      });
+      this.wavesurfer.on('finish', () => {
+        this.isPlaying = false;
+        this.currentTime = this.duration;
+        this.progressPercent = 100;
+        if (this.mode === 'mp3') {
+          this.nextSong(); // Passer au MP3 suivant automatiquement
+        }
+      });
+    } else {
+      console.error("Conteneur #waveform introuvable pour le mode MP3.");
+    }
+
 
     // Listeners pour déverrouiller l'autoplay après interaction utilisateur
     document.addEventListener('click', () => this.handleUserInteraction());
@@ -343,11 +350,11 @@ createApp({
     document.addEventListener('keydown', () => this.handleUserInteraction());
 
     // --- Initialisation pour le mode MIX ---
-    // Charger la liste des mixes au démarrage
-    this.fetchMixList(); 
-    // Initialiser le lecteur audio pour les mixes
     this.mixPlayer = this.$refs.mixPlayer;
     this.setupMixPlayerEvents(); // Configurer les événements de l'audio tag
+
+    // Charger la liste des mixes au démarrage
+    this.fetchMixList(); 
 
     // Charger le premier MP3 si on est en mode mp3 et que l'utilisateur a déjà interagi
     if (this.mode === 'mp3' && this.userInteracted) {
@@ -367,7 +374,7 @@ createApp({
     document.removeEventListener('keydown', this.handleUserInteraction);
   },
 
-  methods: { // <<< TOUTES LES MÉTHODES DOIVENT ÊTRE DÉFINIES ICI >>>
+  methods: { // <<< TOUTES LES MÉTHODES SONT DÉFINIES ICI >>>
     // --- Gestion de l'interaction utilisateur (pour autoplay) ---
     handleUserInteraction() {
       if (!this.userInteracted) {
@@ -411,9 +418,9 @@ createApp({
         else this.playAudio();
       } else { // Si en mode MIX, ce bouton sert à basculer vers MP3 et jouer
           console.log("Play button pressed in MIX mode. Switching to MP3 mode.");
-          this.toggleMode(); 
-          this.$nextTick(() => { // Attendre que le mode MP3 soit chargé
-              if (this.isSongReady) this.playAudio();
+          this.toggleMode(); // Bascule vers MP3
+          this.$nextTick(() => { // Attend que le mode MP3 soit chargé
+              if (this.isSongReady) this.playAudio(); // Joue le MP3 s'il est prêt
           });
       }
     },
@@ -428,7 +435,7 @@ createApp({
       if (this.isLoading) return;
       this.resetPlayerState(true); // Réinitialiser pour un nouveau MP3
 
-      axios.get(`/api/next-song?mode=mp3`, { withCredentials: true })
+      axios.get(`/api/next-song?mode=mp3`, { withCredentials: true }) // Charger un MP3
         .then((res) => {
           const data = res.data;
           this.updateSongHistory(data.songName);
@@ -460,7 +467,7 @@ createApp({
       if (this.isLoading) return;
       this.resetPlayerState(true); // Réinitialiser pour un nouveau MP3
 
-      axios.get(`/api/previous-song?mode=mp3`, { withCredentials: true })
+      axios.get(`/api/previous-song?mode=mp3`, { withCredentials: true }) // Toujours charger un MP3
         .then((res) => {
           const data = res.data;
           this.updateSongHistory(data.songName);
@@ -527,12 +534,12 @@ createApp({
     // Initialise juste le conteneur WaveSurfer pour une waveform de mix
     initMixWaveformContainer(mix) {
         // --- VERIFICATION CRUCIALE ---
-        // Assure que le mix a les propriétés nécessaires AVANT de tenter de créer WaveSurfer
+        // Assurez-vous que le mix a les propriétés nécessaires AVANT de tenter de créer WaveSurfer
         if (!mix || !mix.fileName || !mix.url || !mix.waveformJsonUrl) {
             console.warn("Mix invalide ou incomplet (url/waveformJsonUrl manquant):", mix);
-            return; // Sortir si les données sont insuffisantes
+            return; 
         }
-        const waveformId = `waveform-${mix.fileName}`; // L'ID doit correspondre au nom du fichier .mp3 du mix
+        const waveformId = `waveform-${mix.fileName}`; // L'ID doit correspondre au nom du fichier audio (.mp3)
         const container = document.getElementById(waveformId);
         
         if (!container) {
@@ -568,7 +575,7 @@ createApp({
             console.log(`WaveSurfer container initialized for: ${mix.fileName}`);
 
             // Événements pour cette instance WaveSurfer du mix
-            ws.on('ready', (duration) => { 
+            ws.on('ready', (duration) => { // Quand la waveform JSON est prête
                 console.log(`Waveform ready for ${mix.fileName}, duration: ${duration}`);
                 if (this.currentMix === mix.fileName) { 
                     this.mixDuration = duration;
@@ -577,23 +584,23 @@ createApp({
                     this.mixInfoCache[mix.fileName].duration = duration;
                 }
             });
-            ws.on('play', () => { 
+            ws.on('play', () => { // Quand la visualisation commence
                 if (this.currentMix === mix.fileName) {
                     this.isMixPlaying = true;
                     this.mixCurrentTime = ws.getCurrentTime();
                 }
             });
-            ws.on('pause', () => { 
+            ws.on('pause', () => { // Quand la visualisation est en pause
                 if (this.currentMix === mix.fileName) {
                     this.isMixPlaying = false;
                 }
             });
-            ws.on('audioprocess', (time) => { 
+            ws.on('audioprocess', (time) => { // Pendant la lecture
                 if (this.currentMix === mix.fileName) {
                     this.mixCurrentTime = time;
                 }
             });
-            ws.on('finish', () => { 
+            ws.on('finish', () => { // Signal de fin de lecture (WaveSurfer)
                 console.log(`Waveform finished for ${mix.fileName}. Resetting state.`);
                 this.isMixPlaying = false;
                 this.mixCurrentTime = 0;
@@ -601,7 +608,7 @@ createApp({
                 ws.seekTo(0); 
                 this.currentMix = null; 
             });
-            ws.on('seeking', (time) => { 
+            ws.on('seeking', (time) => { // Clic sur la waveform
                 if (this.currentMix === mix.fileName) {
                     this.mixCurrentTime = time;
                 }
@@ -614,7 +621,6 @@ createApp({
     // Gère le clic sur la waveform pour chercher la position de lecture
     seekMix(mix, event) {
         const ws = this.mixWaveSurfers[mix.fileName];
-        // Ne fait rien si ce n'est pas le mix actif ou s'il n'y a pas de waveform
         if (!ws || this.currentMix !== mix.fileName) return; 
 
         const waveWrapper = event.currentTarget; 
@@ -644,7 +650,7 @@ createApp({
     toggleMixPlayPause(mix) {
         const ws = this.mixWaveSurfers[mix.fileName];
         if (!ws) {
-            console.error(`WaveSurfer instance not found for mix: ${mix.fileName}`); // Erreur clé
+            console.error(`WaveSurfer instance not found for mix: ${mix.fileName}`);
             return;
         }
 
@@ -732,7 +738,7 @@ createApp({
           // Recrée l'instance WaveSurfer pour le MP3
           if (this.wavesurfer) this.wavesurfer.destroy();
           this.wavesurfer = WaveSurfer.create({
-            container: '#waveform', 
+            container: '#waveform', // Le div de la waveform MP3
             waveColor: '#FFFFFF',
             progressColor: 'transparent',
             barWidth: 2,
