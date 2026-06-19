@@ -47,11 +47,10 @@ const caches = {
   [MIX_BUCKET_NAME]: { files: null, loadedAt: 0 }
 };
 
-async function getMp3Files(bucketName) {
+async function getAllMp3(bucketName) {
   const now = Date.now();
   const cache = caches[bucketName];
   if (cache.files && (now - cache.loadedAt < 10 * 60 * 1000)) return cache.files;
-  
   const [files] = await storage.bucket(bucketName).getFiles();
   const fileNames = files.map(f => f.name).filter(n => n.endsWith('.mp3'));
   caches[bucketName] = { files: fileNames, loadedAt: now };
@@ -63,8 +62,7 @@ async function getSongStats(songName) {
     const doc = await db.collection('song_stats').doc(songName).get();
     if (!doc.exists) return { likeCount: 0, dislikeCount: 0 };
     return doc.data();
-  } catch (e) {
-    console.error(`Erreur stats ${songName}:`, e);
+  } catch {
     return { likeCount: 0, dislikeCount: 0 };
   }
 }
@@ -74,7 +72,6 @@ async function getImageUrl(songFileName, bucketName) {
     const specificPochettePath = `${POCHETTE_FOLDER}${songFileName.replace('.mp3', '.jpg')}`;
     const specificPochetteFile = storage.bucket(bucketName).file(specificPochettePath);
     const [exists] = await specificPochetteFile.exists();
-
     if (exists) {
       return `https://storage.googleapis.com/${bucketName}/${specificPochettePath}`;
     } else {
@@ -91,8 +88,7 @@ async function getCountryFromIP(ip) {
     const res = await fetch(`http://ip-api.com/json/${ip}?fields=country`);
     const data = await res.json();
     return data.country || 'Unknown';
-  } catch (e) {
-    console.error("Erreur IP:", e);
+  } catch {
     return 'Unknown';
   }
 }
@@ -102,7 +98,8 @@ app.get('/api/waveform/:bucketType/:fileName', async (req, res) => {
   try {
     const { bucketType, fileName } = req.params;
     const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-    const filePathInBucket = WAVE_FOLDER + decodeURIComponent(fileName).replace('.mp3', '.json');
+    const cleanFileName = decodeURIComponent(fileName).replace('.mp3', '.json');
+    const filePathInBucket = WAVE_FOLDER + cleanFileName;
 
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -125,16 +122,16 @@ app.get('/api/waveform/:bucketType/:fileName', async (req, res) => {
     console.log(`✅ Waveform served: ${filePathInBucket}`);
 
   } catch (e) {
-    console.error('Erreur /api/waveform:', e);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Erreur /api/waveform:', e);
+    res.status(500).json({ error: 'Server error: ' + e.message });
   }
 });
 
+// ✅ SERVIR LES FICHIERS AUDIO
 app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
   try {
     const { type, bucketType, fileName } = req.params;
-    const primaryBucket = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-    const secondaryBucket = bucketType === 'mix' ? MP3_BUCKET_NAME : MIX_BUCKET_NAME;
+    const bucketName = bucketType === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
     const targetName = decodeURIComponent(fileName);
 
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -147,29 +144,22 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
 
     let file;
     let contentType;
-    let filePathInBucket;
 
     if (type === 'audio') {
-      filePathInBucket = targetName;
+      file = storage.bucket(bucketName).file(targetName);
       contentType = 'audio/mpeg';
     } else if (type === 'waveform') {
-      filePathInBucket = WAVE_FOLDER + targetName.replace('.mp3', '.json');
+      file = storage.bucket(bucketName).file(WAVE_FOLDER + targetName.replace('.mp3', '.json'));
       contentType = 'application/json';
     } else {
       return res.status(400).json({ error: 'Type invalide' });
     }
 
-    file = storage.bucket(primaryBucket).file(filePathInBucket);
     let [exists] = await file.exists();
 
     if (!exists) {
-      file = storage.bucket(secondaryBucket).file(filePathInBucket);
-      [exists] = await file.exists();
-    }
-
-    if (!exists) {
-      console.error(`❌ Fichier not found: ${filePathInBucket}`);
-      return res.status(404).json({ error: 'Fichier not found' });
+      console.error(`❌ File not found: ${targetName} dans ${bucketName}`);
+      return res.status(404).json({ error: 'Fichier non trouvé' });
     }
 
     if (type === 'audio') {
@@ -190,9 +180,11 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
           'Content-Type': contentType,
           'Access-Control-Allow-Origin': '*',
         });
+
         file.createReadStream({ start, end }).pipe(res);
       } else {
         res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Length', fileSize);
         file.createReadStream().pipe(res);
@@ -200,12 +192,12 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     } else {
       const [content] = await file.download();
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Content-Length', Buffer.byteLength(content));
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.send(content);
     }
   } catch (e) {
-    console.error('Erreur /api/file:', e);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Erreur /api/file:', e);
+    res.status(500).json({ error: 'Server error: ' + e.message });
   }
 });
 
@@ -213,7 +205,6 @@ app.get('/api/next-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-    
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/next-song - IP: ${ip} - Mode: ${mode}`);
@@ -221,14 +212,14 @@ app.get('/api/next-song', async (req, res) => {
     if (!req.session.playedSongs) req.session.playedSongs = {};
     if (!req.session.playedSongs[bucketName]) req.session.playedSongs[bucketName] = [];
 
-    const allSongs = await getMp3Files(bucketName);
+    const allSongs = await getAllMp3(bucketName);
     let played = req.session.playedSongs[bucketName];
     let available = allSongs.filter(s => !played.includes(s));
 
     if (available.length === 0) {
       req.session.playedSongs[bucketName] = [];
       available = allSongs;
-      if (available.length === 0) return res.status(404).json({ error: 'No songs' });
+      if (available.length === 0) return res.status(404).json({ error: `Aucune chanson dans ${bucketName}` });
     }
 
     const song = available[Math.floor(Math.random() * available.length)];
@@ -239,7 +230,7 @@ app.get('/api/next-song', async (req, res) => {
       getSongStats(song),
       getImageUrl(song, bucketName)
     ]);
-    
+
     const color = '#' + Math.floor(Math.random() * 0xFFFFFF).toString(16).padStart(6, '0');
     const inverse = '#' + (0xFFFFFF - parseInt(color.slice(1), 16)).toString(16).padStart(6, '0');
 
@@ -256,8 +247,8 @@ app.get('/api/next-song', async (req, res) => {
       dislikeCount: stats.dislikeCount || 0,
     });
   } catch (e) {
-    console.error('Erreur /api/next-song:', e);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Erreur /api/next-song:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -265,13 +256,12 @@ app.get('/api/previous-song', async (req, res) => {
   try {
     const mode = req.query.mode === 'mix' ? 'mix' : 'mp3';
     const bucketName = mode === 'mix' ? MIX_BUCKET_NAME : MP3_BUCKET_NAME;
-
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/previous-song - IP: ${ip} - Mode: ${mode}`);
-    
+
     if (!req.session.playedSongs || !req.session.playedSongs[bucketName] || req.session.playedSongs[bucketName].length < 2) {
-      return res.status(400).json({ error: 'No previous song' });
+      return res.status(400).json({ error: 'Pas de chanson précédente' });
     }
 
     req.session.playedSongs[bucketName].pop();
@@ -292,32 +282,30 @@ app.get('/api/previous-song', async (req, res) => {
       dislikeCount: stats.dislikeCount || 0,
     });
   } catch (e) {
-    console.error('Erreur /api/previous-song:', e);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Erreur /api/previous-song:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
-// ✅ FIX : /api/mix-list retourne les URLs correctes
+// ✅ FIX : /api/mix-list avec waveformJsonUrl correct
 app.get('/api/mix-list', async (req, res) => {
   try {
+    const mixes = await getAllMp3(MIX_BUCKET_NAME);
     const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/mix-list - IP: ${ip}`);
 
-    const mixes = await getMp3Files(MIX_BUCKET_NAME);
-
     const result = mixes.map(mix => ({
-      name: mix.replace('.mp3',''),
+      name: mix.replace('.mp3', ''),
       fileName: mix,
       url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-      // ✅ FIX : Utilise la nouvelle route /api/waveform
       waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
     }));
 
     res.json(result);
-
   } catch (e) {
-    console.error('Erreur /api/mix-list:', e);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Erreur /api/mix-list:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -327,65 +315,56 @@ async function generateSongDescription(songName) {
   try {
     const doc = await db.collection('song_descriptions').doc(songName).get();
     if (doc.exists) {
-      console.log('✅ Description cached:', songName);
+      console.log('✅ Description du cache');
       return doc.data().text;
     }
 
     if (!GEMINI_ENABLED) {
-      return 'Description unavailable';
+      console.log('⚠️ Gemini désactivé');
+      return 'Description indisponible (Gemini désactivé)';
     }
-    
-    const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); 
+
+    const model = vertexAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     const response = await model.generateContent({
       contents: [{
         role: 'user',
         parts: [{
-          text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases.`
+          text: `Décris brièvement "${songName.replace('.mp3', '')}" en 2 phrases`
         }]
       }]
     });
-    
-    const text = response.response?.candidates?.[0]?.content?.parts?.[0]?.text || 'Failed';
 
-    if (text !== 'Failed') {
-      await db.collection('song_descriptions').doc(songName).set({ text });
-      console.log('✅ Description generated:', songName);
-    }
-
+    const text = response.response.candidates[0].content.parts[0].text;
+    await db.collection('song_descriptions').doc(songName).set({ text });
+    console.log('✅ Description générée:', songName);
     return text;
 
   } catch (e) {
-    console.error('❌ Gemini error:', e.message);
-    return 'Unavailable';
+    console.error('❌ Erreur Gemini:', e.message);
+    return 'Description non disponible';
   }
 }
 
 app.post('/api/song-feedback', async (req, res) => {
   try {
     const { songName, feedback } = req.body;
-    if (!songName || !feedback) return res.status(400).json({ error: 'Missing data' });
+    if (!songName || !feedback) return res.status(400).json({ error: 'Données manquantes' });
 
     if (!req.session.votedSongs) req.session.votedSongs = {};
-    if (req.session.votedSongs[songName]) return res.status(409).json({ error: 'Already voted' });
+    if (req.session.votedSongs[songName]) return res.status(409).json({ error: 'Vote déjà enregistré.' });
 
     const statsRef = db.collection('song_stats').doc(songName);
-    if (feedback === 'like') {
-      await statsRef.set({ likeCount: FieldValue.increment(1) }, { merge: true });
-    } else if (feedback === 'dislike') {
-      await statsRef.set({ dislikeCount: FieldValue.increment(1) }, { merge: true });
-    } else {
-      return res.status(400).json({ error: 'Invalid feedback type' });
-    }
+    if (feedback === 'like') await statsRef.set({ likeCount: FieldValue.increment(1) }, { merge: true });
+    else if (feedback === 'dislike') await statsRef.set({ dislikeCount: FieldValue.increment(1) }, { merge: true });
+    else return res.status(400).json({ error: 'Feedback invalide.' });
 
     req.session.votedSongs[songName] = true;
-
     const statsDoc = await statsRef.get();
     const data = statsDoc.data() || { likeCount: 0, dislikeCount: 0 };
-    
     res.json({ success: true, likeCount: data.likeCount, dislikeCount: data.dislikeCount });
   } catch (e) {
-    console.error('Erreur /api/song-feedback:', e);
-    res.status(500).json({ error: 'Server error' });
+    console.error('❌ Erreur feedback:', e);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
