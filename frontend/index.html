@@ -462,67 +462,133 @@ createApp({
       await this.playAudio();
     },
 
-    async loadNextSong() {
-      this.isLoading = true;
-      try {
-        const res = await axios.get('/api/next-song?mode=mp3', { withCredentials: true });
-        const data = res.data;
+async loadNextSong() {
+  this.isLoading = true;
+  try {
+    const res = await axios.get('/api/next-song?mode=mp3', { withCredentials: true });
+    const data = res.data;
 
-        this.songName = data.songName;
-        this.songUrl = data.url;
-        this.fileName = data.fileName;
-        this.imageUrl = data.imageUrl || '';
-        this.songDescription = data.description || '';
-        this.globalLikeCount = data.likeCount || 0;
-        this.globalDislikeCount = data.dislikeCount || 0;
-        this.hasVoted = false;
+    this.songName = data.songName;
+    this.songUrl = data.url;
+    this.fileName = data.fileName;
+    this.imageUrl = data.imageUrl || '';
+    this.songDescription = data.description || '';
+    this.globalLikeCount = data.likeCount || 0;
+    this.globalDislikeCount = data.dislikeCount || 0;
+    this.hasVoted = false;
 
-        this.updateSongHistory(this.songName);
+    this.updateSongHistory(this.songName);
 
-        if (this.wavesurfer) {
-          this.isSongReady = false;
-          this.currentTime = '0:00';  // ✅ Réinitialise l'affichage du temps
-          this.progressPercent = 0;   // ✅ Réinitialise la progress bar
+    if (this.wavesurfer) {
+      this.isSongReady = false;
+      this.currentTime = '0:00';
+      this.progressPercent = 0;
+      
+      // ✅ DESTROY l'ancienne instance
+      this.wavesurfer.destroy();
+      
+      // ✅ CRÉE une nouvelle instance
+      this.wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: '#FFFFFF',
+        progressColor: 'transparent',
+        barWidth: 2,
+        height: 250,
+        responsive: true,
+        cursorWidth: 2,
+        cursorColor: '#fff',
+        hideScrollbar: true,
+      });
 
-          this.wavesurfer.load(this.songUrl);
-        }
-      } catch (e) {
-        console.error('❌ loadNextSong error:', e);
-      } finally {
-        this.isLoading = false;
-      }
-    },
+      // ✅ RE-BRANCHE les événements
+      this.wavesurfer.on('audioprocess', () => {
+        this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+        this.progressPercent = (this.wavesurfer.getCurrentTime() / this.wavesurfer.getDuration()) * 100;
+      });
 
-    async loadPreviousSong() {
-      this.isLoading = true;
-      try {
-        const res = await axios.get('/api/previous-song?mode=mp3', { withCredentials: true });
-        const data = res.data;
+      this.wavesurfer.on('finish', () => {
+        this.isPlaying = false;
+        this.loadNextSong();
+      });
 
-        this.songName = data.songName;
-        this.songUrl = data.url;
-        this.fileName = data.fileName;
-        this.imageUrl = data.imageUrl || '';
-        this.songDescription = data.description || '';
-        this.globalLikeCount = data.likeCount || 0;
-        this.globalDislikeCount = data.dislikeCount || 0;
-        this.hasVoted = false;
+      this.wavesurfer.once('ready', () => {
+        this.isSongReady = true;
+        this.duration = this.formatTime(this.wavesurfer.getDuration());
+      });
 
-        this.updateSongHistory(this.songName);
+      // ✅ CHARGE la nouvelle URL
+      this.wavesurfer.load(this.songUrl);
+    }
+  } catch (e) {
+    console.error('❌ loadNextSong error:', e);
+  } finally {
+    this.isLoading = false;
+  }
+},
 
-        if (this.wavesurfer) {
-          this.isSongReady = false;
-                this.currentTime = '0:00';  // ✅ Réinitialise l'affichage du temps
-      this.progressPercent = 0;   // ✅ Réinitialise la progress bar
+async loadPreviousSong() {
+  this.isLoading = true;
+  try {
+    const res = await axios.get('/api/previous-song?mode=mp3', { withCredentials: true });
+    const data = res.data;
 
-          this.wavesurfer.load(this.songUrl);
-        }
-      } catch (e) {
-        console.error('❌ loadPreviousSong error:', e);
-      } finally {
-        this.isLoading = false;
-      }
-    },
+    this.songName = data.songName;
+    this.songUrl = data.url;
+    this.fileName = data.fileName;
+    this.imageUrl = data.imageUrl || '';
+    this.songDescription = data.description || '';
+    this.globalLikeCount = data.likeCount || 0;
+    this.globalDislikeCount = data.dislikeCount || 0;
+    this.hasVoted = false;
+
+    this.updateSongHistory(this.songName);
+
+    if (this.wavesurfer) {
+      this.isSongReady = false;
+      this.currentTime = '0:00';
+      this.progressPercent = 0;
+      
+      // ✅ DESTROY l'ancienne instance
+      this.wavesurfer.destroy();
+      
+      // ✅ CRÉE une nouvelle instance
+      this.wavesurfer = WaveSurfer.create({
+        container: '#waveform',
+        waveColor: '#FFFFFF',
+        progressColor: 'transparent',
+        barWidth: 2,
+        height: 250,
+        responsive: true,
+        cursorWidth: 2,
+        cursorColor: '#fff',
+        hideScrollbar: true,
+      });
+
+      // ✅ RE-BRANCHE les événements
+      this.wavesurfer.on('audioprocess', () => {
+        this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
+        this.progressPercent = (this.wavesurfer.getCurrentTime() / this.wavesurfer.getDuration()) * 100;
+      });
+
+      this.wavesurfer.on('finish', () => {
+        this.isPlaying = false;
+        this.loadPreviousSong();
+      });
+
+      this.wavesurfer.once('ready', () => {
+        this.isSongReady = true;
+        this.duration = this.formatTime(this.wavesurfer.getDuration());
+      });
+
+      // ✅ CHARGE la nouvelle URL
+      this.wavesurfer.load(this.songUrl);
+    }
+  } catch (e) {
+    console.error('❌ loadPreviousSong error:', e);
+  } finally {
+    this.isLoading = false;
+  }
+},
 
     nextSong() {
       this.loadNextSong();
