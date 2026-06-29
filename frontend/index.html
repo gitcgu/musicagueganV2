@@ -539,9 +539,18 @@ createApp({
         });
 
        // ws.load(mix.waveformJsonUrl);
-        ws.load(mix.waveformJsonUrl).catch(e => {
-  console.warn(`⚠️ Pas de waveform pour ${mix.fileName}, ok on continue`);
-});
+fetch(mix.waveformJsonUrl)
+  .then(res => res.json())
+  .then(data => {
+    // Convertir le format data → peaks
+    const peaks = [data.data]; // Wrap dans un array
+    const duration = data.length / data.sample_rate;
+    ws.loadDecodedBuffer(peaks, duration);
+    console.log(`✅ Waveform loaded for ${mix.fileName}`);
+  })
+  .catch(e => {
+    console.warn(`⚠️ Pas de waveform pour ${mix.fileName}`);
+  });
         console.log(`✅ WaveSurfer init for: ${mix.fileName}`);
       } catch (e) {
         console.error(`❌ Erreur WaveSurfer pour ${mix.fileName}:`, e);
