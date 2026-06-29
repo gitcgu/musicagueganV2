@@ -297,12 +297,12 @@ app.get('/api/mix-list', async (req, res) => {
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/mix-list - IP: ${ip}`);
 
-const result = mixes.map(mix => ({
-  name: mix.replace('.mp3', ''),
-  fileName: mix,
-  url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-  waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
-}));
+    const result = mixes.map(mix => ({
+      name: mix.replace('.mp3', ''),
+      fileName: mix,
+      url: `https://storage.googleapis.com/${MIX_BUCKET_NAME}/${mix}`,
+      waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
+    }));
 
     res.json(result);
   } catch (e) {
