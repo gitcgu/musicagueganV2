@@ -715,37 +715,7 @@ initMixWaveformContainer(mix) {
   } catch (e) {
     console.error(`❌ Erreur WaveSurfer pour ${mix.fileName}:`, e);
   }
-}
-       // ws.load(mix.waveformJsonUrl);
-fetch(mix.waveformJsonUrl)
-  .then(res => res.json())
-  .then(data => {
-    // Convertir array en peaks pour WaveSurfer (format: [min, max] par pixel)
-    const peaks = [];
-    const samplesPerPixel = data.samples_per_pixel || 1024;
-    
-    for (let i = 0; i < data.data.length; i += samplesPerPixel) {
-      const chunk = data.data.slice(i, i + samplesPerPixel);
-      const min = Math.min(...chunk);
-      const max = Math.max(...chunk);
-      peaks.push(min, max);
-    }
-    
-    const duration = data.length / data.sample_rate;
-    //ws.loadDecodedBuffer([peaks], duration);
-    //ws.load()
-    ws.load(mix.url, peaks, duration);  // ✅ CHARGE L'AUDIO + les peaks
-
-    console.log(`✅ Waveform loaded for ${mix.fileName}`);
-  })
-  .catch(e => {
-    console.warn(`⚠️ Pas de waveform pour ${mix.fileName}:`, e);
-  });
-        console.log(`✅ WaveSurfer init for: ${mix.fileName}`);
-      } catch (e) {
-        console.error(`❌ Erreur WaveSurfer pour ${mix.fileName}:`, e);
-      }
-    },
+},,
 
     seekMix(mix, event) {
       const ws = this.mixWaveSurfers[mix.fileName];
