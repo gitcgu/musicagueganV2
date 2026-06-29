@@ -542,14 +542,23 @@ createApp({
 fetch(mix.waveformJsonUrl)
   .then(res => res.json())
   .then(data => {
-    // Convertir le format data → peaks
-    const peaks = [data.data]; // Wrap dans un array
+    // Convertir array en peaks pour WaveSurfer (format: [min, max] par pixel)
+    const peaks = [];
+    const samplesPerPixel = data.samples_per_pixel || 1024;
+    
+    for (let i = 0; i < data.data.length; i += samplesPerPixel) {
+      const chunk = data.data.slice(i, i + samplesPerPixel);
+      const min = Math.min(...chunk);
+      const max = Math.max(...chunk);
+      peaks.push(min, max);
+    }
+    
     const duration = data.length / data.sample_rate;
-    ws.loadDecodedBuffer(peaks, duration);
+    ws.loadDecodedBuffer([peaks], duration);
     console.log(`✅ Waveform loaded for ${mix.fileName}`);
   })
   .catch(e => {
-    console.warn(`⚠️ Pas de waveform pour ${mix.fileName}`);
+    console.warn(`⚠️ Pas de waveform pour ${mix.fileName}:`, e);
   });
         console.log(`✅ WaveSurfer init for: ${mix.fileName}`);
       } catch (e) {
