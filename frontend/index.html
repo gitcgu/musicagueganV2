@@ -665,7 +665,7 @@ fetch(mix.waveformJsonUrl)
       ws.seek(seekTime);
     },
     
-    toggleMixPlayPause(mix) {
+toggleMixPlayPause(mix) {
   const ws = this.mixWaveSurfers[mix.fileName];
   if (!ws) {
     console.error(`❌ WaveSurfer not found for: ${mix.fileName}`);
@@ -677,13 +677,6 @@ fetch(mix.waveformJsonUrl)
     ws.pause();
     this.isMixPlaying = false;
   } else {
-    // ✅ Reset toutes les autres waveforms quand on change de mix
-    Object.keys(this.mixWaveSurfers).forEach(fileName => {
-      if (fileName !== mix.fileName) {
-        this.mixWaveSurfers[fileName].seek(0);  // Revenir à 0:00
-      }
-    });
-
     this.currentMix = mix.fileName;
 
     if (this.wavesurfer && this.isPlaying) {
@@ -703,7 +696,7 @@ fetch(mix.waveformJsonUrl)
       this.isMixPlaying = false;
     });
   }
-},  // ✅ Virgule correcte pour l'objet methods
+}, // ✅ Virgule
 
     async toggleMode() {
       this.isLoading = true;
