@@ -481,6 +481,8 @@ createApp({
 
         if (this.wavesurfer) {
           this.isSongReady = false;
+          this.wavesurfer.seek(0);  // ✅ AJOUTE CETTE LIGNE
+
           this.wavesurfer.load(this.songUrl);
         }
       } catch (e) {
