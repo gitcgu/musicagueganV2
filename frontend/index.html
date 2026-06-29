@@ -434,7 +434,9 @@ createApp({
         await this.wavesurfer.play();
         this.isPlaying = true;
       } catch (e) {
-        console.error('❌ Erreur playAudio:',toggle e);
+      //  console.error('❌ Erreur playAudio:',toggle e);
+            console.error('❌ Erreur playAudio:', e);  // ✅ FIXÉ
+
       }
     },
 
@@ -662,8 +664,8 @@ fetch(mix.waveformJsonUrl)
       if (this.mixPlayer) this.mixPlayer.currentTime = seekTime;
       ws.seek(seekTime);
     },
-
-toggleMixPlayPause(mix) {
+    
+    toggleMixPlayPause(mix) {
   const ws = this.mixWaveSurfers[mix.fileName];
   if (!ws) {
     console.error(`❌ WaveSurfer not found for: ${mix.fileName}`);
@@ -701,7 +703,7 @@ toggleMixPlayPause(mix) {
       this.isMixPlaying = false;
     });
   }
-},
+},  // ✅ Virgule correcte pour l'objet methods
 
     async toggleMode() {
       this.isLoading = true;
