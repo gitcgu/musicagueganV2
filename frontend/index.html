@@ -434,7 +434,7 @@ createApp({
         await this.wavesurfer.play();
         this.isPlaying = true;
       } catch (e) {
-        console.error('❌ Erreur playAudio:', e);
+        console.error('❌ Erreur playAudio:',toggle e);
       }
     },
 
@@ -663,39 +663,45 @@ fetch(mix.waveformJsonUrl)
       ws.seek(seekTime);
     },
 
-    toggleMixPlayPause(mix) {
-      const ws = this.mixWaveSurfers[mix.fileName];
-      if (!ws) {
-        console.error(`❌ WaveSurfer not found for: ${mix.fileName}`);
-        return;
+toggleMixPlayPause(mix) {
+  const ws = this.mixWaveSurfers[mix.fileName];
+  if (!ws) {
+    console.error(`❌ WaveSurfer not found for: ${mix.fileName}`);
+    return;
+  }
+
+  if (this.currentMix === mix.fileName && this.isMixPlaying) {
+    if (this.mixPlayer) this.mixPlayer.pause();
+    ws.pause();
+    this.isMixPlaying = false;
+  } else {
+    // ✅ Reset toutes les autres waveforms quand on change de mix
+    Object.keys(this.mixWaveSurfers).forEach(fileName => {
+      if (fileName !== mix.fileName) {
+        this.mixWaveSurfers[fileName].seek(0);  // Revenir à 0:00
       }
+    });
 
-      if (this.currentMix === mix.fileName && this.isMixPlaying) {
-        if (this.mixPlayer) this.mixPlayer.pause();
-        ws.pause();
-        this.isMixPlaying = false;
-      } else {
-        this.currentMix = mix.fileName;
+    this.currentMix = mix.fileName;
 
-        if (this.wavesurfer && this.isPlaying) {
-          this.wavesurfer.pause();
-          this.isPlaying = false;
-        }
+    if (this.wavesurfer && this.isPlaying) {
+      this.wavesurfer.pause();
+      this.isPlaying = false;
+    }
 
-        const mixInfo = this.mixInfoCache[mix.fileName];
-        if (!mixInfo || !mixInfo.url) {
-          console.error('❌ Mix info not found:', mix.fileName);
-          return;
-        }
+    const mixInfo = this.mixInfoCache[mix.fileName];
+    if (!mixInfo || !mixInfo.url) {
+      console.error('❌ Mix info not found:', mix.fileName);
+      return;
+    }
 
-        //this.mixPlayer.src = mixInfo.url;
-        this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
-        this.mixPlayer.play().catch(e => {
-          console.error('❌ Play error:', e);
-          this.isMixPlaying = false;
-        });
-      }
-    },
+    this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
+    this.mixPlayer.play().catch(e => {
+      console.error('❌ Play error:', e);
+      this.isMixPlaying = false;
+    });
+  }
+},
 
     async toggleMode() {
       this.isLoading = true;
