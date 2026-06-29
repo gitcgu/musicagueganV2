@@ -649,58 +649,73 @@ async loadPreviousSong() {
       }
     },
 
-    initMixWaveformContainer(mix) {
-      if (!mix || !mix.fileName || !mix.url || !mix.waveformJsonUrl) {
-        console.warn('⚠️ Mix invalide:', mix);
-        return;
+initMixWaveformContainer(mix) {
+  if (!mix || !mix.fileName || !mix.url || !mix.waveformJsonUrl) {
+    console.warn('⚠️ Mix invalide:', mix);
+    return;
+  }
+
+  const safeFileName = mix.fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+  const waveformId = `waveform-${safeFileName}`;
+  const container = document.getElementById(waveformId);
+
+  if (!container) {
+    console.error(`❌ Conteneur #${waveformId} non trouvé`);
+    return;
+  }
+
+  try {
+    const ws = WaveSurfer.create({
+      container: `#${waveformId}`,
+      waveColor: '#ffffff',
+      progressColor: '#ff0000',
+      barWidth: 3,
+      barGap: 1,
+      height: 40,
+      responsive: true,
+      cursorWidth: 2,
+      cursorColor: '#fff',
+      hideScrollbar: true,
+    });
+
+    this.mixWaveSurfers[mix.fileName] = ws;
+    this.mixInfoCache[mix.fileName] = { url: mix.url, waveformJsonUrl: mix.waveformJsonUrl, duration: 0 };
+
+    ws.on('ready', () => {
+      const duration = ws.getDuration();
+      if (duration && duration > 0) {
+        this.mixInfoCache[mix.fileName].duration = duration;
+        console.log(`✅ WaveSurfer ready for ${mix.fileName}: ${duration}s`);
       }
+    });
 
-      const safeFileName = mix.fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-      const waveformId = `waveform-${safeFileName}`;
-      const container = document.getElementById(waveformId);
-
-      if (!container) {
-        console.error(`❌ Conteneur #${waveformId} non trouvé`);
-        return;
+    ws.on('audioprocess', (time) => {
+      if (this.currentMix === mix.fileName) {
+        this.mixCurrentTime = time;
       }
+    });
 
-      try {
-        const ws = WaveSurfer.create({
-          container: `#${waveformId}`,
-          waveColor: '#ffffff',
-          progressColor: '#ff0000',
-          barWidth: 3,
-          barGap: 1,
-          height: 40,
-          responsive: true,
-          cursorWidth: 2,
-          cursorColor: '#fff',
-          hideScrollbar: true,
-        });
+    ws.on('seeking', (time) => {
+      if (this.currentMix === mix.fileName) {
+        this.mixCurrentTime = time;
+      }
+    });
 
-        this.mixWaveSurfers[mix.fileName] = ws;
-        this.mixInfoCache[mix.fileName] = { url: mix.url, waveformJsonUrl: mix.waveformJsonUrl, duration: 0 };
+    ws.on('finish', () => {
+      if (this.currentMix === mix.fileName) {
+        this.isMixPlaying = false;
+        this.mixCurrentTime = 0;
+      }
+    });
 
-        ws.on('ready', () => {
-          const duration = ws.getDuration();
-          if (duration && duration > 0) {
-            this.mixInfoCache[mix.fileName].duration = duration;
-            console.log(`✅ WaveSurfer ready for ${mix.fileName}: ${duration}s`);
-          }
-        });
+    // ✅ CHARGE L'AUDIO DIRECTEMENT
+    ws.load(mix.url);
+    console.log(`✅ WaveSurfer init for: ${mix.fileName}`);
 
-        ws.on('audioprocess', (time) => {
-          if (this.currentMix === mix.fileName) {
-            this.mixCurrentTime = time;
-          }
-        });
-
-        ws.on('seeking', (time) => {
-          if (this.currentMix === mix.fileName && this.mixPlayer) {
-            this.mixPlayer.currentTime = time;
-          }
-        });
-
+  } catch (e) {
+    console.error(`❌ Erreur WaveSurfer pour ${mix.fileName}:`, e);
+  }
+}
        // ws.load(mix.waveformJsonUrl);
 fetch(mix.waveformJsonUrl)
   .then(res => res.json())
@@ -758,31 +773,32 @@ toggleMixPlayPause(mix) {
   }
 
   if (this.currentMix === mix.fileName && this.isMixPlaying) {
-    if (this.mixPlayer) this.mixPlayer.pause();
     ws.pause();
     this.isMixPlaying = false;
   } else {
+    // ✅ Stop les autres mixes
+    Object.keys(this.mixWaveSurfers).forEach(fileName => {
+      if (fileName !== mix.fileName) {
+        const otherWs = this.mixWaveSurfers[fileName];
+        if (otherWs) otherWs.pause();
+      }
+    });
+
     this.currentMix = mix.fileName;
 
+    // ✅ Pause la waveform MP3
     if (this.wavesurfer && this.isPlaying) {
       this.wavesurfer.pause();
       this.isPlaying = false;
     }
 
-    const mixInfo = this.mixInfoCache[mix.fileName];
-    if (!mixInfo || !mixInfo.url) {
-      console.error('❌ Mix info not found:', mix.fileName);
-      return;
-    }
-
-   //this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
-    this.mixPlayer.src = mixInfo.url;  // ✅ Utilise l'URL du backend, pas Google Storage directement
-    this.mixPlayer.play().catch(e => {
+    // ✅ Play SEULEMENT via WaveSurfer, pas mixPlayer
+    ws.play().catch(e => {
       console.error('❌ Play error:', e);
       this.isMixPlaying = false;
     });
   }
-}, // ✅ Virgule
+},
 
     async toggleMode() {
       this.isLoading = true;
