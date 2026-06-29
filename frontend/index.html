@@ -555,7 +555,9 @@ fetch(mix.waveformJsonUrl)
     
     const duration = data.length / data.sample_rate;
     //ws.loadDecodedBuffer([peaks], duration);
-    ws.load()
+    //ws.load()
+    ws.load(mix.url, peaks, duration);  // ✅ CHARGE L'AUDIO + les peaks
+
     console.log(`✅ Waveform loaded for ${mix.fileName}`);
   })
   .catch(e => {
