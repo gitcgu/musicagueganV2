@@ -289,7 +289,6 @@ app.get('/api/previous-song', async (req, res) => {
   }
 });
 
-// ✅ FIX : /api/mix-list avec waveformJsonUrl correct
 app.get('/api/mix-list', async (req, res) => {
   try {
     const mixes = await getAllMp3(MIX_BUCKET_NAME);
@@ -300,7 +299,7 @@ app.get('/api/mix-list', async (req, res) => {
     const result = mixes.map(mix => ({
       name: mix.replace('.mp3', ''),
       fileName: mix,
-      url: `https://storage.googleapis.com/${MIX_BUCKET_NAME}/${mix}`,
+      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
       waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
     }));
 
