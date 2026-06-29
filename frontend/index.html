@@ -586,7 +586,8 @@ createApp({
           return;
         }
 
-        this.mixPlayer.src = mixInfo.url;
+        //this.mixPlayer.src = mixInfo.url;
+        this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
         this.mixPlayer.play().catch(e => {
           console.error('❌ Play error:', e);
           this.isMixPlaying = false;
