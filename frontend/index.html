@@ -11,60 +11,261 @@
   body { margin: 0; background: #000; color: #fff; font-family: sans-serif; text-align: center; }
   .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
   .mode-switch { position: absolute; top: 20px; right: 20px; z-index: 10; }
-  .waveform-wrapper { position: relative; width: 100%; max-width: 900px; height: 250px; margin: 20px 0; background: #000; border-radius: 10px; overflow: hidden; }
-  .album-image { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-size: cover; background-position: center; z-index: 1; transition: clip-path 0.1s linear; }
-  #waveform { position: relative; width: 100%; height: 100%; z-index: 2; opacity: 0.5; filter: grayscale(100%); }
+  
+  .waveform-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    height: 250px;
+    margin: 20px 0;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  
+  .album-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+    transition: clip-path 0.1s linear;
+  }
+  
+  #waveform {
+    position: relative;
+    width: 100%; 
+    height: 100%;
+    z-index: 2;
+    opacity: 0.5;
+    filter: grayscale(100%);
+  }
+  
   .controls button { margin: 5px; padding: 10px 20px; font-size: 16px; cursor: pointer; }
   button:disabled { opacity: 0.6; cursor: not-allowed; }
-  .player-controls { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; gap: 20px; z-index: 3; opacity: 0; transition: opacity 0.3s ease; }
+
+  .player-controls {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: 20px;
+    z-index: 3;
+    opacity: 0;                 
+    transition: opacity 0.3s ease;
+  }
   .waveform-wrapper:hover .player-controls { opacity: 1; }
   @media (hover: none) { .player-controls { opacity: 1; } }
-  .player-controls button { appearance: none; -webkit-appearance: none; -moz-appearance: none; -webkit-tap-highlight-color: transparent; outline: none; border: none; border-radius: 50%; width: 55px; height: 55px; background: rgba(0,0,0,0.6); cursor: pointer; backdrop-filter: blur(5px); transition: all 0.2s ease; display: flex; justify-content: center; align-items: center; padding: 0; }
+  
+  .player-controls button {
+    appearance: none; -webkit-appearance: none; -moz-appearance: none;
+    -webkit-tap-highlight-color: transparent; outline: none; border: none;
+    border-radius: 50%; width: 55px; height: 55px;
+    background: rgba(0,0,0,0.6); cursor: pointer;
+    backdrop-filter: blur(5px);
+    transition: all 0.2s ease;
+    display: flex; justify-content: center; align-items: center; padding: 0;
+  }
   .player-controls .play-btn { width: 70px; height: 70px; }
   .player-controls button svg { width: 60%; height: 60%; }
   .player-controls button:hover { background: rgba(255,255,255,0.25); transform: scale(1.1); }
   .player-controls button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-  .feedback-overlay { position: absolute; bottom: 15px; right: 15px; display: flex; gap: 12px; z-index: 4; }
-  .feedback-btn { appearance: none; -webkit-appearance: none; -webkit-tap-highlight-color: transparent; border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 18px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.5); color: white; cursor: pointer; backdrop-filter: blur(5px); transition: all 0.2s ease; }
+
+  .feedback-overlay {
+    position: absolute; bottom: 15px; right: 15px;
+    display: flex; gap: 12px; z-index: 4;
+  }
+  .feedback-btn {
+    appearance: none; -webkit-appearance: none; -webkit-tap-highlight-color: transparent;
+    border: none; border-radius: 50%; width: 50px; height: 50px; font-size: 18px;
+    display: flex; justify-content: center; align-items: center;
+    background: rgba(0,0,0,0.5); color: white; cursor: pointer;
+    backdrop-filter: blur(5px); transition: all 0.2s ease;
+  }
   .feedback-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.1); }
   .feedback-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .like-btn { background: rgba(0,200,0,0.5); }
   .dislike-btn { background: rgba(200,0,0,0.5); }
-  .mix-list { width: 100%; max-width: none; padding: 10px 20px; margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
-  .mix-item { display: grid; grid-template-columns: 150px 1fr 150px 60px 100px; align-items: center; gap: 15px; font-size: 14px; padding: 10px; border-radius: 8px; background: rgba(255,255,255,0.05); transition: background 0.2s ease; }
-  .mix-item:hover { background: rgba(255,255,255,0.1); }
-  .mix-name { max-width: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; font-weight: 500; }
-  .dots { display: none; }
-  .mix-waveform { width: 100%; height: 50px; min-width: 150px; cursor: pointer; }
-  .mix-controls { display: flex; align-items: center; gap: 8px; }
-  .mix-play { background: rgba(0, 200, 100, 0.6); border: none; color: white; font-size: 16px; cursor: pointer; padding: 0; width: 45px; height: 45px; display: flex; justify-content: center; align-items: center; border-radius: 50%; transition: background 0.2s ease; }
-  .mix-play:hover { background: rgba(0, 200, 100, 0.8); }
-  .mix-time { font-size: 13px; opacity: 0.8; min-width: 100px; text-align: right; }
-  @media (max-width: 768px) { .mix-item { grid-template-columns: 80px 1fr 50px 70px; gap: 10px; padding: 8px; } .mix-name { font-size: 12px; } .mix-waveform { height: 40px; min-width: 100px; } .mix-time { font-size: 11px; min-width: 70px; } .mix-play { width: 40px; height: 40px; } }
-  @media (max-width: 480px) { .mix-item { grid-template-columns: 60px 1fr 40px; gap: 8px; padding: 6px; } .mix-name { font-size: 11px; } .mix-waveform { height: 35px; min-width: 80px; } .mix-time { display: none; } .mix-play { width: 38px; height: 38px; font-size: 14px; } }
-  .previous-songs { margin-top: 20px; margin-bottom: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.4); }
+  
+.mix-list {
+  width: 100%;
+  max-width: none;  /* ✅ Remove limit */
+  padding: 10px 20px;  /* ✅ Plus de padding horizontal */
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;  /* ✅ Espacement entre les items */
+}
+
+.mix-item {
+  display: grid;
+  grid-template-columns: 150px 1fr 150px 60px 100px;  /* ✅ Layout plus spacieux */
+  align-items: center;
+  gap: 15px;  /* ✅ Gap entre éléments */
+  font-size: 14px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.05);  /* ✅ Fond léger */
+  transition: background 0.2s ease;
+}
+
+.mix-item:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.mix-name {
+  max-width: none;  /* ✅ Remove limit */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.dots {
+  display: none;  /* ✅ Remove dots, pas utile en grid */
+}
+
+.mix-waveform {
+  width: 100%;
+  height: 50px;  /* ✅ Plus grand */
+  min-width: 150px;
+  cursor: pointer;
+}
+
+.mix-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mix-play {
+  background: rgba(0, 200, 100, 0.6);
+  border: none;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 45px;
+  height: 45px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.mix-play:hover {
+  background: rgba(0, 200, 100, 0.8);
+}
+
+.mix-time {
+  font-size: 13px;
+  opacity: 0.8;
+  min-width: 100px;
+  text-align: right;
+}
+
+/* ✅ RESPONSIVE MOBILE */
+@media (max-width: 768px) {
+  .mix-item {
+    grid-template-columns: 80px 1fr 50px 70px;  /* ✅ Moins de colonnes */
+    gap: 10px;
+    padding: 8px;
+  }
+
+  .mix-name {
+    font-size: 12px;
+  }
+
+  .mix-waveform {
+    height: 40px;
+    min-width: 100px;
+  }
+
+  .mix-time {
+    font-size: 11px;
+    min-width: 70px;
+  }
+
+  .mix-play {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mix-item {
+    grid-template-columns: 60px 1fr 40px;  /* ✅ Minimal : nom + waveform + play */
+    gap: 8px;
+    padding: 6px;
+  }
+
+  .mix-name {
+    font-size: 11px;
+  }
+
+  .mix-waveform {
+    height: 35px;
+    min-width: 80px;
+  }
+
+  .mix-time {
+    display: none;  /* ✅ Hide time on mobile */
+  }
+
+  .mix-play {
+    width: 38px;
+    height: 38px;
+    font-size: 14px;
+  }
+}
+
+  .previous-songs {
+    margin-top: 20px; margin-bottom: 10px;
+    font-size: 14px; color: rgba(255, 255, 255, 0.4);
+  }
   .prev-song { padding: 3px 0; }
-  .time-display { font-size: 1.2em; margin-top: 10px; }
-  .start-message { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 24px; color: rgba(255,255,255,0.8); z-index: 100; cursor: pointer; text-align: center; }
+  
+  .time-display {
+    font-size: 1.2em; margin-top: 10px;
+  }
+
+  .start-message {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 24px; color: rgba(255,255,255,0.8);
+    z-index: 100; cursor: pointer; text-align: center;
+  }
+    
 </style>
 </head>
 <body>
   <div id="app">
     <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
+
       <div class="mode-switch">
         <button @click="toggleMode" :disabled="isLoading">
           {{ mode === 'mp3' ? 'Go to MIX list' : 'Back to single MP3' }}
         </button>
       </div>
+
       <div v-if="mode === 'mp3' && songHistory.length > 0" class="previous-songs">
         <div v-for="(song, idx) in songHistory.slice(1).reverse()" :key="idx" class="prev-song">
           {{ song }}
         </div>
       </div>
+      
       <h1 v-if="mode === 'mp3'">{{ songName }}</h1>
+
       <p v-if="mode === 'mp3'" style="color: #0099ff; font-size: 14px; max-width: 600px; margin: 10px auto;">
         {{ songDescription }}
       </p>
+      
       <div v-if="mode === 'mp3'" class="waveform-wrapper">
         <div class="album-image"
              :style="{ 
@@ -90,28 +291,32 @@
         </div>
       </div>
       <div v-if="mode === 'mp3'" class="time-display">{{ currentTime }} / {{ duration }}</div>
+
+      <audio ref="mixPlayer" style="display:none;"></audio>
+
       <div v-if="mode === 'mix'" class="mix-list">
-        <div v-for="mix in mixList"
-          :key="mix.fileName"
-          :class="['mix-item', { active: currentMix === mix.fileName && isMixPlaying }]"
-        >
-          <span class="mix-name" :title="mix.name">{{ mix.name }}</span>
-          <div :id="'waveform-' + mix.fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()" 
-               class="mix-waveform" 
-               @click="seekMix(mix, $event)">
-          </div>
-          <button class="mix-play" @click="toggleMixPlayPause(mix)">
-            {{ currentMix === mix.fileName && isMixPlaying ? '⏸' : '▶' }}
-          </button>
-          <span class="mix-time">
-            {{ currentMix === mix.fileName ? formatTime(mixCurrentTime) + ' / ' + formatTime(mixDuration) : '0:00 / 0:00' }}
-          </span>
-        </div>
-      </div>
+       <div v-for="mix in mixList"
+  :key="mix.fileName"
+  :class="['mix-item', { active: currentMix === mix.fileName && isMixPlaying }]"
+>
+  <span class="mix-name" :title="mix.name">{{ mix.name }}</span>
+  <div :id="'waveform-' + mix.fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()" 
+       class="mix-waveform" 
+       @click="seekMix(mix, $event)">
+  </div>
+  <button class="mix-play" @click="toggleMixPlayPause(mix)">
+    {{ currentMix === mix.fileName && isMixPlaying ? '⏸' : '▶' }}
+  </button>
+  <span class="mix-time">
+    {{ currentMix === mix.fileName ? formatTime(mixCurrentTime) + ' / ' + formatTime(mixDuration) : '0:00 / 0:00' }}
+  </span>
+</div>
+      
       <div class="feedback-overlay">
         <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
         <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
       </div>
+
       <div v-if="!userInteracted && isSongReady" class="start-message">
         👆 Start music
       </div>
@@ -146,10 +351,12 @@ createApp({
       songDescription: '',
       mixList: [],
       currentMix: null,
+      mixPlayer: null,
       mixCurrentTime: 0,
       mixDuration: 0,
       mixWaveSurfers: {},
       isMixPlaying: false,
+      mixInfoCache: {},
     };
   },
 
@@ -191,6 +398,9 @@ createApp({
     document.addEventListener('touchstart', () => this.handleUserInteraction());
     document.addEventListener('keydown', () => this.handleUserInteraction());
 
+    this.mixPlayer = this.$refs.mixPlayer;
+    this.setupMixPlayerEvents();
+
     if (this.mode === 'mix') {
       this.fetchMixList();
     } else {
@@ -224,7 +434,9 @@ createApp({
         await this.wavesurfer.play();
         this.isPlaying = true;
       } catch (e) {
-        console.error('❌ Erreur playAudio:', e);
+      //  console.error('❌ Erreur playAudio:',toggle e);
+            console.error('❌ Erreur playAudio:', e);  // ✅ FIXÉ
+
       }
     },
 
@@ -245,7 +457,7 @@ createApp({
 
     async replaySong() {
       if (!this.wavesurfer || !this.isSongReady) return;
-      this.wavesurfer.seekTo(0);
+      this.wavesurfer.seek(0);
       await this.playAudio();
     },
 
@@ -268,40 +480,6 @@ createApp({
 
         if (this.wavesurfer) {
           this.isSongReady = false;
-          this.currentTime = '0:00';
-          this.progressPercent = 0;
-          this.wavesurfer.destroy();
-          
-          this.wavesurfer = WaveSurfer.create({
-            container: '#waveform',
-            waveColor: '#FFFFFF',
-            progressColor: 'transparent',
-            barWidth: 2,
-            height: 250,
-            responsive: true,
-            cursorWidth: 2,
-            cursorColor: '#fff',
-            hideScrollbar: true,
-          });
-
-          this.wavesurfer.on('audioprocess', () => {
-            this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-            this.progressPercent = (this.wavesurfer.getCurrentTime() / this.wavesurfer.getDuration()) * 100;
-          });
-
-          this.wavesurfer.on('finish', () => {
-            this.isPlaying = false;
-            this.loadNextSong();
-          });
-
-          this.wavesurfer.once('ready', () => {
-            this.isSongReady = true;
-            this.duration = this.formatTime(this.wavesurfer.getDuration());
-            if (this.userInteracted && this.isPlaying) {
-              this.playAudio();
-            }
-          });
-
           this.wavesurfer.load(this.songUrl);
         }
       } catch (e) {
@@ -330,40 +508,6 @@ createApp({
 
         if (this.wavesurfer) {
           this.isSongReady = false;
-          this.currentTime = '0:00';
-          this.progressPercent = 0;
-          this.wavesurfer.destroy();
-          
-          this.wavesurfer = WaveSurfer.create({
-            container: '#waveform',
-            waveColor: '#FFFFFF',
-            progressColor: 'transparent',
-            barWidth: 2,
-            height: 250,
-            responsive: true,
-            cursorWidth: 2,
-            cursorColor: '#fff',
-            hideScrollbar: true,
-          });
-
-          this.wavesurfer.on('audioprocess', () => {
-            this.currentTime = this.formatTime(this.wavesurfer.getCurrentTime());
-            this.progressPercent = (this.wavesurfer.getCurrentTime() / this.wavesurfer.getDuration()) * 100;
-          });
-
-          this.wavesurfer.on('finish', () => {
-            this.isPlaying = false;
-            this.loadPreviousSong();
-          });
-
-          this.wavesurfer.once('ready', () => {
-            this.isSongReady = true;
-            this.duration = this.formatTime(this.wavesurfer.getDuration());
-            if (this.userInteracted && this.isPlaying) {
-              this.playAudio();
-            }
-          });
-
           this.wavesurfer.load(this.songUrl);
         }
       } catch (e) {
@@ -379,6 +523,31 @@ createApp({
 
     previousSong() {
       this.loadPreviousSong();
+    },
+
+    setupMixPlayerEvents() {
+      if (!this.mixPlayer) return;
+
+      this.mixPlayer.addEventListener('timeupdate', () => {
+        this.mixCurrentTime = this.mixPlayer.currentTime;
+      });
+
+      this.mixPlayer.addEventListener('loadedmetadata', () => {
+        this.mixDuration = this.mixPlayer.duration;
+      });
+
+      this.mixPlayer.addEventListener('ended', () => {
+        this.isMixPlaying = false;
+        this.mixCurrentTime = 0;
+      });
+
+      this.mixPlayer.addEventListener('play', () => {
+        this.isMixPlaying = true;
+      });
+
+      this.mixPlayer.addEventListener('pause', () => {
+        this.isMixPlaying = false;
+      });
     },
 
     async fetchMixList() {
@@ -398,7 +567,7 @@ createApp({
     },
 
     initMixWaveformContainer(mix) {
-      if (!mix || !mix.fileName || !mix.url) {
+      if (!mix || !mix.fileName || !mix.url || !mix.waveformJsonUrl) {
         console.warn('⚠️ Mix invalide:', mix);
         return;
       }
@@ -427,32 +596,56 @@ createApp({
         });
 
         this.mixWaveSurfers[mix.fileName] = ws;
-        ws.isReady = false;
+        this.mixInfoCache[mix.fileName] = { url: mix.url, waveformJsonUrl: mix.waveformJsonUrl, duration: 0 };
 
         ws.on('ready', () => {
-          ws.isReady = true;
-          console.log(`✅ Mix ready: ${mix.fileName}`);
+          const duration = ws.getDuration();
+          if (duration && duration > 0) {
+            this.mixInfoCache[mix.fileName].duration = duration;
+            console.log(`✅ WaveSurfer ready for ${mix.fileName}: ${duration}s`);
+          }
         });
 
         ws.on('audioprocess', (time) => {
           if (this.currentMix === mix.fileName) {
             this.mixCurrentTime = time;
-            this.mixDuration = ws.getDuration();
           }
         });
 
-        ws.on('finish', () => {
-          if (this.currentMix === mix.fileName) {
-            this.isMixPlaying = false;
-            this.mixCurrentTime = 0;
+        ws.on('seeking', (time) => {
+          if (this.currentMix === mix.fileName && this.mixPlayer) {
+            this.mixPlayer.currentTime = time;
           }
         });
 
-        ws.load(mix.url);
-        console.log(`✅ Mix loaded: ${mix.fileName}`);
+       // ws.load(mix.waveformJsonUrl);
+fetch(mix.waveformJsonUrl)
+  .then(res => res.json())
+  .then(data => {
+    // Convertir array en peaks pour WaveSurfer (format: [min, max] par pixel)
+    const peaks = [];
+    const samplesPerPixel = data.samples_per_pixel || 1024;
+    
+    for (let i = 0; i < data.data.length; i += samplesPerPixel) {
+      const chunk = data.data.slice(i, i + samplesPerPixel);
+      const min = Math.min(...chunk);
+      const max = Math.max(...chunk);
+      peaks.push(min, max);
+    }
+    
+    const duration = data.length / data.sample_rate;
+    //ws.loadDecodedBuffer([peaks], duration);
+    //ws.load()
+    ws.load(mix.url, peaks, duration);  // ✅ CHARGE L'AUDIO + les peaks
 
+    console.log(`✅ Waveform loaded for ${mix.fileName}`);
+  })
+  .catch(e => {
+    console.warn(`⚠️ Pas de waveform pour ${mix.fileName}:`, e);
+  });
+        console.log(`✅ WaveSurfer init for: ${mix.fileName}`);
       } catch (e) {
-        console.error(`❌ Erreur ${mix.fileName}:`, e);
+        console.error(`❌ Erreur WaveSurfer pour ${mix.fileName}:`, e);
       }
     },
 
@@ -460,48 +653,50 @@ createApp({
       const ws = this.mixWaveSurfers[mix.fileName];
       if (!ws || this.currentMix !== mix.fileName) return;
 
+      const waveWrapper = event.currentTarget;
       const clickX = event.offsetX;
-      const waveWidth = event.currentTarget.offsetWidth;
-      const duration = ws.getDuration();
+      const waveWidth = waveWrapper.offsetWidth;
+      const duration = this.mixPlayer.duration || ws.getDuration() || 0;
 
       if (duration === 0 || !isFinite(duration)) return;
 
       const seekTime = (clickX / waveWidth) * duration;
-      ws.seekTo(seekTime / duration);
+      if (this.mixPlayer) this.mixPlayer.currentTime = seekTime;
+      ws.seek(seekTime);
     },
+    
+toggleMixPlayPause(mix) {
+  const ws = this.mixWaveSurfers[mix.fileName];
+  if (!ws) {
+    console.error(`❌ WaveSurfer not found for: ${mix.fileName}`);
+    return;
+  }
 
-    toggleMixPlayPause(mix) {
-      const ws = this.mixWaveSurfers[mix.fileName];
-      if (!ws) {
-        console.error(`❌ WaveSurfer not found: ${mix.fileName}`);
-        return;
-      }
+  if (this.currentMix === mix.fileName && this.isMixPlaying) {
+    if (this.mixPlayer) this.mixPlayer.pause();
+    ws.pause();
+    this.isMixPlaying = false;
+  } else {
+    this.currentMix = mix.fileName;
 
-      if (this.currentMix === mix.fileName && this.isMixPlaying) {
-        ws.pause();
-        this.isMixPlaying = false;
-      } else {
-        Object.values(this.mixWaveSurfers).forEach(otherWs => {
-          if (otherWs && otherWs !== ws) otherWs.pause();
-        });
+    if (this.wavesurfer && this.isPlaying) {
+      this.wavesurfer.pause();
+      this.isPlaying = false;
+    }
 
-        if (this.wavesurfer && this.isPlaying) {
-          this.wavesurfer.pause();
-          this.isPlaying = false;
-        }
+    const mixInfo = this.mixInfoCache[mix.fileName];
+    if (!mixInfo || !mixInfo.url) {
+      console.error('❌ Mix info not found:', mix.fileName);
+      return;
+    }
 
-        this.currentMix = mix.fileName;
-        
-        if (!ws.isReady) {
-          console.warn(`⚠️ ${mix.fileName} not ready yet`);
-          return;
-        }
-        
-        this.mixDuration = ws.getDuration();
-        this.mixCurrentTime = 0;
-        ws.play().catch(e => console.error('❌ Play error:', e));
-      }
-    },
+    this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
+    this.mixPlayer.play().catch(e => {
+      console.error('❌ Play error:', e);
+      this.isMixPlaying = false;
+    });
+  }
+}, // ✅ Virgule
 
     async toggleMode() {
       this.isLoading = true;
@@ -509,6 +704,7 @@ createApp({
       if (this.mode === 'mp3' && this.isPlaying) {
         this.pauseAudio();
       } else if (this.mode === 'mix' && this.isMixPlaying) {
+        if (this.mixPlayer) this.mixPlayer.pause();
         this.isMixPlaying = false;
       }
 
