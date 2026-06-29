@@ -294,24 +294,25 @@
 
       <audio ref="mixPlayer" style="display:none;"></audio>
 
-      <div v-if="mode === 'mix'" class="mix-list">
-       <div v-for="mix in mixList"
-  :key="mix.fileName"
-  :class="['mix-item', { active: currentMix === mix.fileName && isMixPlaying }]"
->
-  <span class="mix-name" :title="mix.name">{{ mix.name }}</span>
-  <div :id="'waveform-' + mix.fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()" 
-       class="mix-waveform" 
-       @click="seekMix(mix, $event)">
-  </div>
-  <button class="mix-play" @click="toggleMixPlayPause(mix)">
-    {{ currentMix === mix.fileName && isMixPlaying ? '⏸' : '▶' }}
-  </button>
-  <span class="mix-time">
-    {{ currentMix === mix.fileName ? formatTime(mixCurrentTime) + ' / ' + formatTime(mixDuration) : '0:00 / 0:00' }}
-  </span>
-</div>
-      
+<div v-if="mode === 'mix'" class="mix-list">
+        <div v-for="mix in mixList"
+          :key="mix.fileName"
+          :class="['mix-item', { active: currentMix === mix.fileName && isMixPlaying }]"
+        >
+          <span class="mix-name" :title="mix.name">{{ mix.name }}</span>
+          <div :id="'waveform-' + mix.fileName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()" 
+               class="mix-waveform" 
+               @click="seekMix(mix, $event)">
+          </div>
+          <button class="mix-play" @click="toggleMixPlayPause(mix)">
+            {{ currentMix === mix.fileName && isMixPlaying ? '⏸' : '▶' }}
+          </button>
+          <span class="mix-time">
+            {{ currentMix === mix.fileName ? formatTime(mixCurrentTime) + ' / ' + formatTime(mixDuration) : '0:00 / 0:00' }}
+          </span>
+        </div>
+      </div>
+            
       <div class="feedback-overlay">
         <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
         <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
