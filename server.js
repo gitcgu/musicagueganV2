@@ -157,11 +157,17 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
       return res.status(400).json({ error: 'Type invalide' });
     }
 
-    let [exists] = await file.exists();
+    const [exists] = await file.exists();
 
     if (!exists) {
-      console.error(`❌ File not found: ${targetName} dans ${bucketName}`);
-      return res.status(404).json({ error: 'Fichier non trouvé' });
+      console.error(`❌ File not found in bucket "${bucketName}": ${targetName}`);
+      console.error(`   Bucket: ${bucketName}`);
+      console.error(`   Type: ${type}`);
+      console.error(`   BucketType: ${bucketType}`);
+      return res.status(404).json({ 
+        error: 'Fichier non trouvé',
+        details: { bucket: bucketName, file: targetName, type }
+      });
     }
 
     if (type === 'audio') {
@@ -186,7 +192,6 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
         file.createReadStream({ start, end }).pipe(res);
       } else {
         res.setHeader('Content-Type', contentType);
-        res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Length', fileSize);
         file.createReadStream().pipe(res);
@@ -194,7 +199,6 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     } else {
       const [content] = await file.download();
       res.setHeader('Content-Type', contentType);
-      res.setHeader('Access-Control-Allow-Origin', '*');
       res.send(content);
     }
   } catch (e) {
