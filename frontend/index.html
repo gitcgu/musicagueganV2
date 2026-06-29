@@ -554,7 +554,8 @@ fetch(mix.waveformJsonUrl)
     }
     
     const duration = data.length / data.sample_rate;
-    ws.loadDecodedBuffer([peaks], duration);
+    //ws.loadDecodedBuffer([peaks], duration);
+    ws.load()
     console.log(`✅ Waveform loaded for ${mix.fileName}`);
   })
   .catch(e => {
