@@ -157,17 +157,11 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
       return res.status(400).json({ error: 'Type invalide' });
     }
 
-    const [exists] = await file.exists();
+    let [exists] = await file.exists();
 
     if (!exists) {
-      console.error(`❌ File not found in bucket "${bucketName}": ${targetName}`);
-      console.error(`   Bucket: ${bucketName}`);
-      console.error(`   Type: ${type}`);
-      console.error(`   BucketType: ${bucketType}`);
-      return res.status(404).json({ 
-        error: 'Fichier non trouvé',
-        details: { bucket: bucketName, file: targetName, type }
-      });
+      console.error(`❌ File not found: ${targetName} dans ${bucketName}`);
+      return res.status(404).json({ error: 'Fichier non trouvé' });
     }
 
     if (type === 'audio') {
@@ -192,6 +186,7 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
         file.createReadStream({ start, end }).pipe(res);
       } else {
         res.setHeader('Content-Type', contentType);
+        res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Accept-Ranges', 'bytes');
         res.setHeader('Content-Length', fileSize);
         file.createReadStream().pipe(res);
@@ -199,6 +194,7 @@ app.get('/api/file/:type/:bucketType/:fileName', async (req, res) => {
     } else {
       const [content] = await file.download();
       res.setHeader('Content-Type', contentType);
+      res.setHeader('Access-Control-Allow-Origin', '*');
       res.send(content);
     }
   } catch (e) {
@@ -293,6 +289,7 @@ app.get('/api/previous-song', async (req, res) => {
   }
 });
 
+// ✅ FIX : /api/mix-list avec waveformJsonUrl correct
 app.get('/api/mix-list', async (req, res) => {
   try {
     const mixes = await getAllMp3(MIX_BUCKET_NAME);
@@ -300,12 +297,12 @@ app.get('/api/mix-list', async (req, res) => {
     const country = await getCountryFromIP(ip);
     console.log(`🌍 /api/mix-list - IP: ${ip}`);
 
-    const result = mixes.map(mix => ({
-      name: mix.replace('.mp3', ''),
-      fileName: mix,
-      url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-      waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
-    }));
+const result = mixes.map(mix => ({
+  name: mix.replace('.mp3', ''),
+  fileName: mix,
+  url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
+  waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
+}));
 
     res.json(result);
   } catch (e) {
