@@ -745,7 +745,9 @@ fetch(mix.waveformJsonUrl)
 
       const seekTime = (clickX / waveWidth) * duration;
       if (this.mixPlayer) this.mixPlayer.currentTime = seekTime;
-      ws.seek(seekTime);
+        ws.seekTo(seekTime / duration);  // ✅ Change seek() en seekTo() avec ratio (0-1)
+
+   //   ws.seek(seekTime);
     },
     
 toggleMixPlayPause(mix) {
@@ -773,7 +775,8 @@ toggleMixPlayPause(mix) {
       return;
     }
 
-    this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
+   //this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
+    this.mixPlayer.src = mixInfo.url;  // ✅ Utilise l'URL du backend, pas Google Storage directement
     this.mixPlayer.play().catch(e => {
       console.error('❌ Play error:', e);
       this.isMixPlaying = false;
