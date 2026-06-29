@@ -538,7 +538,10 @@ createApp({
           }
         });
 
-        ws.load(mix.waveformJsonUrl);
+       // ws.load(mix.waveformJsonUrl);
+        ws.load(mix.waveformJsonUrl).catch(e => {
+  console.warn(`⚠️ Pas de waveform pour ${mix.fileName}, ok on continue`);
+});
         console.log(`✅ WaveSurfer init for: ${mix.fileName}`);
       } catch (e) {
         console.error(`❌ Erreur WaveSurfer pour ${mix.fileName}:`, e);
