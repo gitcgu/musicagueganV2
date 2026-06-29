@@ -300,7 +300,8 @@ app.get('/api/mix-list', async (req, res) => {
       name: mix.replace('.mp3', ''),
       fileName: mix,
       url: `/api/file/audio/mix/${encodeURIComponent(mix)}`,
-      waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix.replace('.mp3', ''))}`
+      //waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix.replace('.mp3', ''))}`
+      waveformJsonUrl: `/api/waveform/mix/${encodeURIComponent(mix)}`
 
     }));
 
