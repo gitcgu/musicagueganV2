@@ -679,7 +679,7 @@ async loadPreviousSong() {
         });
 
         this.mixWaveSurfers[mix.fileName] = ws;
-        this.mixInfoCache[mix.fileName] = { url: mix.url, waveformJsonUrl: mix.waveformJsonUrl, duration: 0 };
+        this.mixInfoCache[mix.fileName] = { url: mix.url, waveformJsonUrl: mix.waveformJsonUrl, duration: 0 , lastPosition: 0  };
 
         ws.on('ready', () => {
           const duration = ws.getDuration();
@@ -756,10 +756,15 @@ toggleMixPlayPause(mix) {
   }
 
   if (this.currentMix === mix.fileName && this.isMixPlaying) {
-    if (this.mixPlayer) this.mixPlayer.pause();
+    // ✅ PAUSE : sauvegarder la position actuelle
+    if (this.mixPlayer) {
+      this.mixPlayer.pause();
+      this.mixInfoCache[mix.fileName].lastPosition = this.mixPlayer.currentTime;
+    }
     ws.pause();
     this.isMixPlaying = false;
   } else {
+    // PLAY : restaurer la position sauvegardée
     this.currentMix = mix.fileName;
 
     if (this.wavesurfer && this.isPlaying) {
@@ -774,6 +779,11 @@ toggleMixPlayPause(mix) {
     }
 
     this.mixPlayer.src = `https://storage.googleapis.com/musica-mix-bucket/${mix.fileName}`;
+    
+    // ✅ Restaurer la position si elle existe
+    const lastPosition = mixInfo.lastPosition || 0;
+    this.mixPlayer.currentTime = lastPosition;
+    
     this.mixPlayer.play().catch(e => {
       console.error('❌ Play error:', e);
       this.isMixPlaying = false;
