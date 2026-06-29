@@ -481,7 +481,8 @@ createApp({
 
         if (this.wavesurfer) {
           this.isSongReady = false;
-          this.wavesurfer.seek(0);  // ✅ AJOUTE CETTE LIGNE
+          this.currentTime = '0:00';  // ✅ Réinitialise l'affichage du temps
+          this.progressPercent = 0;   // ✅ Réinitialise la progress bar
 
           this.wavesurfer.load(this.songUrl);
         }
@@ -511,6 +512,9 @@ createApp({
 
         if (this.wavesurfer) {
           this.isSongReady = false;
+                this.currentTime = '0:00';  // ✅ Réinitialise l'affichage du temps
+      this.progressPercent = 0;   // ✅ Réinitialise la progress bar
+
           this.wavesurfer.load(this.songUrl);
         }
       } catch (e) {
