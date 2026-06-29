@@ -458,7 +458,9 @@ createApp({
 
     async replaySong() {
       if (!this.wavesurfer || !this.isSongReady) return;
-      this.wavesurfer.seek(0);
+     // this.wavesurfer.seek(0);
+        this.wavesurfer.seekTo(0);  // ✅ Change seek() en seekTo()
+
       await this.playAudio();
     },
 
@@ -514,6 +516,10 @@ async loadNextSong() {
       this.wavesurfer.once('ready', () => {
         this.isSongReady = true;
         this.duration = this.formatTime(this.wavesurfer.getDuration());
+         // ✅ AJOUTE CETTE PARTIE : démarre automatiquement
+        if (this.userInteracted && this.isPlaying) {
+          this.playAudio();
+        }
       });
 
       // ✅ CHARGE la nouvelle URL
@@ -578,6 +584,10 @@ async loadPreviousSong() {
       this.wavesurfer.once('ready', () => {
         this.isSongReady = true;
         this.duration = this.formatTime(this.wavesurfer.getDuration());
+         // ✅ AJOUTE CETTE PARTIE : démarre automatiquement
+        if (this.userInteracted && this.isPlaying) {
+          this.playAudio();
+        }
       });
 
       // ✅ CHARGE la nouvelle URL
