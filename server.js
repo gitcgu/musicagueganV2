@@ -266,9 +266,11 @@ app.get('/api/previous-song', async (req, res) => {
       return res.status(400).json({ error: 'Pas de chanson précédente' });
     }
 
+    // req.session.playedSongs[bucketName].pop();
+    //const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
+    const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 2];
     req.session.playedSongs[bucketName].pop();
-    const song = req.session.playedSongs[bucketName][req.session.playedSongs[bucketName].length - 1];
-
+    
     const stats = await getSongStats(song);
     const imageUrl = await getImageUrl(song, bucketName);
 
