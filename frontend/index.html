@@ -10,7 +10,46 @@
 <style>
   body { margin: 0; background: #000; color: #fff; font-family: sans-serif; text-align: center; }
   .container { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; position: relative; }
-  .mode-switch { position: absolute; top: 20px; right: 20px; z-index: 10; }
+  /* .mode-switch { position: absolute; top: 20px; right: 20px; z-index: 10; } */
+/* Position fixe en haut à droite */
+.mode-switch { 
+  position: absolute; 
+  top: 25px; 
+  right: 25px; 
+  z-index: 1000; 
+}
+
+/* Style "Ghost Button" professionnel */
+.nav-btn {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px); /* Effet verre poli */
+}
+
+/* Effet au survol */
+.nav-btn:hover:not(:disabled) {
+  background: #ffffff;
+  color: #000000;
+  border-color: #ffffff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+/* État désactivé */
+.nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+
   
   .waveform-wrapper {
     position: relative;
@@ -248,11 +287,26 @@
   <div id="app">
     <div class="container" :style="{ backgroundColor: bgColor, color: textColor }">
 
-      <div class="mode-switch">
+      <!-- <div class="mode-switch">
         <button @click="toggleMode" :disabled="isLoading">
           {{ mode === 'mp3' ? 'Go to MIX list' : 'Back to single MP3' }}
         </button>
-      </div>
+      </div> -->
+      
+
+<div class="mode-switch">
+  <button 
+    class="nav-btn" 
+    @click="toggleMode" 
+    :disabled="isLoading"
+    :class="{ 'loading': isLoading }"
+  >
+    {{ mode === 'mp3' ? 'Explore Mixes' : 'Return Home' }}
+  </button>
+</div>
+
+      
+      
 
       <div v-if="mode === 'mp3' && songHistory.length > 0" class="previous-songs">
         <div v-for="(song, idx) in songHistory.slice(1).reverse()" :key="idx" class="prev-song">
