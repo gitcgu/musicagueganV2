@@ -129,6 +129,21 @@
   .feedback-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
   .like-btn { background: rgba(0,200,0,0.5); }
   .dislike-btn { background: rgba(200,0,0,0.5); }
+
+.weatherall-footer a {
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.5); /* Fond gris sombre semi-transparent */
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: background 0.3s;
+}
+
+.weatherall-footer a:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+  
   
 .mix-list {
   width: 100%;
@@ -366,7 +381,14 @@
           </span>
         </div>
       </div>
-            
+
+
+      <!-- Footer Left: Andrew Weatherall Archive -->
+      <div class="weatherall-footer">
+        <a href="https://drive.google.com/drive/folders/0B23ZLBzfzfvec3ZhVE1uV0JtSGs" target="_blank" rel="noopener noreferrer">
+         Archives Andrew Weatherall
+         </a>
+      </div>
       <div class="feedback-overlay">
         <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
         <button class="feedback-btn dislike-btn" @click="dislikeSong" :disabled="hasVoted">👎 {{ globalDislikeCount }}</button>
