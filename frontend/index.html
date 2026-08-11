@@ -232,7 +232,25 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
 .mix-control-btn:hover:not(:disabled) {
   opacity: 0.8;
 }
-  
+.weatherall-footer {
+  position: fixed;
+  bottom: 20px; /* Ajuste la valeur pour la hauteur */
+  left: 20px;  /* Ajuste la valeur pour l'écart du bord gauche */
+  z-index: 1000; /* Pour s'assurer qu'il reste au-dessus des autres éléments */
+}
+
+.weatherall-footer a {
+  text-decoration: none;
+  color: #555; /* Couleur à ajuster selon ton design */
+  font-size: 0.9em;
+  font-family: sans-serif;
+  opacity: 0.7;
+  transition: opacity 0.3s;
+}
+
+.weatherall-footer a:hover {
+  opacity: 1;
+}  
 </style>
 </head>
 <body>
@@ -339,7 +357,15 @@ box-shadow: 0 2px 6px rgba(0,0,0,0.4);
     </span>
   </div>
 </div>
-      
+
+
+
+      <!-- Footer Left: Andrew Weatherall Archive -->
+      <div class="weatherall-footer">
+      <a href="https://drive.google.com/drive/folders/0B23ZLBzfzfvec3ZhVE1uV0JtSGs" target="_blank" rel="noopener noreferrer">
+       Archives Andrew Weatherall
+      </a>
+     </div>
       <!-- Feedback overlay -->
         <div class="feedback-overlay">
           <button class="feedback-btn like-btn" @click="likeSong" :disabled="hasVoted">❤️ {{ globalLikeCount }}</button>
